@@ -36,6 +36,7 @@ hex = "0.4.3"
 floating-duration = "0.1.2"
 curv = { package = "curv-kzen", version = "0.7.0" }
 gmp-mpfr-sys = "1.4.7"
+
 [dependencies.zk-paillier]
 git = "https://github.com/KZen-networks/zk-paillier"
 tag = "v0.3.12"
