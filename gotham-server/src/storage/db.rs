@@ -47,8 +47,8 @@ where
             let identifier = idify(user_id, id, name);
             let v_string = serde_json::to_string(&v).unwrap();
             rocksdb_client.put(
-                <std::string::String as AsRef<[u8]>>::as_ref(&identifier),
-                <std::string::String as AsRef<[u8]>>::as_ref(&v_string),
+                identifier.as_bytes(),
+                v_string.as_bytes(),
             )?;
             Ok(())
         }
@@ -75,7 +75,7 @@ where
             let identifier = idify(user_id, id, name);
             debug!("Getting from db ({})", identifier);
 
-            let db_option = rocksdb_client.get(<std::string::String as AsRef<[u8]>>::as_ref(&identifier))?;
+            let db_option = rocksdb_client.get(identifier.as_bytes())?;
             let vec_option: Option<Vec<u8>> = db_option.map(|v| v.to_vec());
             match vec_option {
                 Some(vec) => Ok(serde_json::from_slice(&vec).unwrap()),
