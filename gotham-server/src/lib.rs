@@ -11,22 +11,12 @@
 #![feature(decl_macro)]
 #[macro_use]
 extern crate rocket;
-extern crate config;
-extern crate curv;
-extern crate kms;
-extern crate multi_party_ecdsa;
-extern crate rocket_contrib;
-extern crate rocksdb;
-extern crate uuid;
-extern crate zk_paillier;
+
 #[macro_use]
 extern crate failure;
 
-
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
 
 #[macro_use]
 extern crate log;
@@ -34,14 +24,7 @@ extern crate log;
 #[cfg(test)]
 #[macro_use]
 extern crate time_test;
-extern crate floating_duration;
-
-extern crate crypto;
 extern crate jsonwebtoken as jwt;
-// extern crate rusoto_dynamodb;
-// extern crate serde_dynamodb;
-
-extern crate hex;
 
 pub mod auth;
 pub mod routes;

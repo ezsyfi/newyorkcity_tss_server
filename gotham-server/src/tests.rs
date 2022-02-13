@@ -21,7 +21,7 @@ mod tests {
     use std::env;
     use std::time::Instant;
 
-    use curv::elliptic::curves::secp256_k1::{GE, FE};
+    use curv::elliptic::curves::secp256_k1::GE;
     use curv::arithmetic::traits::Converter;
     use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
     use curv::BigInt;
@@ -85,7 +85,7 @@ mod tests {
 
         println!("{} Client: party2 second message", TimeFormat(start.elapsed()));
 
-        let (party_two_second_message, party_two_paillier) =
+        let (_party_two_second_message, party_two_paillier) =
             key_gen_second_message.unwrap();
 
         /*************** END: SECOND MESSAGE ***************/
