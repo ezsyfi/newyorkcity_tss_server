@@ -74,6 +74,19 @@ pub struct GetWalletBalanceResponse {
     pub unconfirmed: u64,
 }
 
+#[derive(Deserialize, Debug)]
+struct BlockCypherAddress {
+    pub address: String,
+    total_received: u64,
+    total_sent: u64,
+    balance: u64,
+    unconfirmed_balance: u64,
+    final_balance: u64,
+    n_tx: u64,
+    unconfirmed_n_tx: u64,
+    final_n_tx: u64,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AddressDerivation {
     pub pos: u32,
@@ -443,13 +456,10 @@ impl Wallet {
     }
 
     fn get_address_balance(address: &bitcoin::Address) -> GetBalanceResponse {
-        // let mut client = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
         let balance_url = BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "/balance";
         let res = reqwest::blocking::get(balance_url).unwrap().text().unwrap();
-
-        println!("Body:\n{}", res);
-        
-        // let resp = client.get_balance(&address.to_string()).unwrap();
+        let blockcypher_address_balance: BlockCypherAddress = serde_json::from_str(res.as_str()).unwrap();
+        println!("{:#?}", blockcypher_address_balance);
 
         GetBalanceResponse {
             confirmed: 0,
