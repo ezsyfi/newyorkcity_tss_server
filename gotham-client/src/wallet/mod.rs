@@ -41,9 +41,9 @@ use std::str::FromStr;
 
 // TODO: move that to a config file and double check electrum server addresses
 const ELECTRUM_HOST: &str = "ec2-34-219-15-143.us-west-2.compute.amazonaws.com:60001";
-//const ELECTRUM_HOST: &str = "testnetnode.arihanc.com:51001";
 const WALLET_FILENAME: &str = "wallet/wallet.data";
 const BACKUP_FILENAME: &str = "wallet/backup.data";
+const BLOCK_CYPHER_HOST: &str = "https://api.blockcypher.com/v1/btc/test3";
 
 #[derive(Serialize, Deserialize)]
 pub struct SignSecondMsgRequest {
@@ -443,13 +443,17 @@ impl Wallet {
     }
 
     fn get_address_balance(address: &bitcoin::Address) -> GetBalanceResponse {
-        let mut client = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
+        // let mut client = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
+        let balance_url = BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "/balance";
+        let res = reqwest::blocking::get(balance_url).unwrap().text().unwrap();
 
-        let resp = client.get_balance(&address.to_string()).unwrap();
+        println!("Body:\n{}", res);
+        
+        // let resp = client.get_balance(&address.to_string()).unwrap();
 
         GetBalanceResponse {
-            confirmed: resp.confirmed,
-            unconfirmed: resp.unconfirmed,
+            confirmed: 0,
+            unconfirmed: 0,
             address: address.to_string(),
         }
     }

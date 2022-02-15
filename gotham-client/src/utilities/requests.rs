@@ -45,7 +45,7 @@ fn _postb<T, V>(client_shim: &ClientShim, path: &str, body: T) -> Option<V>
     info!("(req {}, took: {})", path, TimeFormat(start.elapsed()));
 
     let value = match res {
-        Ok(mut v) => v.text().unwrap(),
+        Ok(v) => v.text().unwrap(),
         Err(_) => return None
     };
 
