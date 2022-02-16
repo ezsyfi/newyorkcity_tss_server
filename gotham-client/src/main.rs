@@ -108,15 +108,15 @@ fn main() {
             if let Some(matches) = matches.subcommand_matches("send") {
                 let to: &str = matches.value_of("to").unwrap();
                 let amount_btc: &str = matches.value_of("amount").unwrap();
-                let txid = wallet.send(
+                let tx_state = wallet.send(
                     to.to_string(),
                     amount_btc.to_string().parse::<f32>().unwrap(),
                     &client_shim,
                 );
                 wallet.save();
                 println!(
-                    "Network: [{}], Sent {} BTC to address {}. Transaction ID: {}",
-                    network, amount_btc, to, txid
+                    "Network: [{}], Sent {} BTC to address {}. Transaction State: {}",
+                    network, amount_btc, to, tx_state
                 );
             }
         }

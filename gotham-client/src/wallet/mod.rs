@@ -9,14 +9,14 @@
 
 use bitcoin;
 use bitcoin::consensus::encode::serialize;
+use bitcoin::hashes::{hex::FromHex, sha256d};
 use bitcoin::network::constants::Network;
+use bitcoin::secp256k1::Signature;
 use bitcoin::util::bip143::SighashComponents;
 use bitcoin::{TxIn, TxOut, Txid};
-use bitcoin::hashes::{sha256d, hex::FromHex};
-use bitcoin::secp256k1::Signature;
+use curv::elliptic::curves::secp256_k1::{GE, PK};
 use curv::elliptic::curves::traits::ECPoint;
 use curv::BigInt;
-use curv::elliptic::curves::secp256_k1::{GE, PK};
 use electrumx_client::{electrumx_client::ElectrumxClient, interface::Electrumx};
 use kms::ecdsa::two_party::MasterKey2;
 use kms::ecdsa::two_party::*;
@@ -40,10 +40,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 // TODO: move that to a config file and double check electrum server addresses
-const ELECTRUM_HOST: &str = "ec2-34-219-15-143.us-west-2.compute.amazonaws.com:60001";
 const WALLET_FILENAME: &str = "wallet/wallet.data";
 const BACKUP_FILENAME: &str = "wallet/backup.data";
-const BLOCK_CYPHER_HOST: &str = "https://api.blockcypher.com/v1/btc/test3"; 
+const BLOCK_CYPHER_HOST: &str = "https://api.blockcypher.com/v1/btc/test3";
 
 #[derive(Serialize, Deserialize)]
 pub struct SignSecondMsgRequest {
@@ -56,7 +55,7 @@ pub struct SignSecondMsgRequest {
 pub struct GetBalanceResponse {
     pub address: String,
     pub confirmed: u64,
-    pub unconfirmed: u64,
+    pub unconfirmed: i64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -71,7 +70,7 @@ pub struct GetListUnspentResponse {
 #[derive(Debug, Deserialize)]
 pub struct GetWalletBalanceResponse {
     pub confirmed: u64,
-    pub unconfirmed: u64,
+    pub unconfirmed: i64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -87,7 +86,7 @@ struct BlockCypherAddress {
     total_received: u64,
     total_sent: u64,
     balance: u64,
-    unconfirmed_balance: u64,
+    unconfirmed_balance: i64,
     final_balance: u64,
     n_tx: u64,
     unconfirmed_n_tx: u64,
@@ -108,6 +107,11 @@ struct BlockCypherTxRef {
     pub spent: bool,
     pub confirmations: u64,
     pub confirmed: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BlockCypherRawTx {
+    pub tx: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -143,7 +147,8 @@ impl Wallet {
     pub fn backup(&self, escrow_service: escrow::Escrow) {
         let g: GE = ECPoint::generator();
         let y = escrow_service.get_public_key();
-        let (segments, encryptions) = self.private_share.master_key.private.to_encrypted_segment(escrow::SEGMENT_SIZE,
+        let (segments, encryptions) = self.private_share.master_key.private.to_encrypted_segment(
+            escrow::SEGMENT_SIZE,
             escrow::NUM_SEGMENTS,
             &y,
             &g,
@@ -212,7 +217,8 @@ impl Wallet {
 
         let client_master_key_recovered =
             MasterKey2::recover_master_key(sk.unwrap(), public_data, chain_code2);
-        let pos_old: u32 = requests::post(client_shim, &format!("ecdsa/{}/recover", key_id)).unwrap();
+        let pos_old: u32 =
+            requests::post(client_shim, &format!("ecdsa/{}/recover", key_id)).unwrap();
 
         let pos_old = if pos_old < 10 { 10 } else { pos_old };
         //TODO: temporary, server will keep updated pos, to do so we need to send update to server for every get_new_address
@@ -291,7 +297,7 @@ impl Wallet {
             })
             .collect();
 
-        let fees = 10_000;
+        // let fees = 10_000;
 
         let amount_satoshi = (amount_btc * 100_000_000 as f32) as u64;
 
@@ -302,13 +308,19 @@ impl Wallet {
             .into_iter()
             .fold(0, |sum, val| sum + val.value) as u64;
 
+        println!(
+            "amount_satoshi: {} - total_selected: {}  ",
+            amount_satoshi, total_selected
+        );
+        println!("{} - back", total_selected - amount_satoshi);
+
         let txs_out = vec![
             TxOut {
                 value: amount_satoshi,
                 script_pubkey: to_btc_adress.script_pubkey(),
             },
             TxOut {
-                value: total_selected - amount_satoshi - fees,
+                value: total_selected - amount_satoshi,
                 script_pubkey: change_address.script_pubkey(),
             },
         ];
@@ -334,9 +346,8 @@ impl Wallet {
             let comp = SighashComponents::new(&transaction);
             let sig_hash = comp.sighash_all(
                 &transaction.input[i],
-                &bitcoin::Address::p2pkh(
-                    &to_bitcoin_public_key(pk),
-                    self.get_bitcoin_network()).script_pubkey(),
+                &bitcoin::Address::p2pkh(&to_bitcoin_public_key(pk), self.get_bitcoin_network())
+                    .script_pubkey(),
                 (selected[i].value as u32).into(),
             );
 
@@ -347,7 +358,8 @@ impl Wallet {
                 BigInt::from(0),
                 BigInt::from(address_derivation.pos),
                 &self.private_share.id,
-            ).unwrap();
+            )
+            .unwrap();
 
             let mut v = BigInt::to_bytes(&signature.r);
             v.extend(BigInt::to_bytes(&signature.s));
@@ -363,21 +375,33 @@ impl Wallet {
             signed_transaction.input[i].witness = vec![sig_vec, pk_vec];
         }
 
-        let mut electrum = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
-
         let raw_tx_hex = hex::encode(serialize(&signed_transaction));
-        let txid = electrum.broadcast_transaction(raw_tx_hex.clone());
 
-        txid.unwrap()
+        let raw_tx_url = BLOCK_CYPHER_HOST.to_owned() + "/txs/push";
+        let raw_tx = BlockCypherRawTx {
+            tx: raw_tx_hex.clone(),
+        };
+        let res = reqwest::blocking::Client::new()
+            .post(raw_tx_url)
+            .json(&raw_tx)
+            .send()
+            .unwrap()
+            .text()
+            .unwrap();
+            
+        print!("{}", res);
+
+        res
     }
 
     pub fn get_new_bitcoin_address(&mut self) -> bitcoin::Address {
         let (pos, mk) = Self::derive_new_key(&self.private_share, self.last_derived_pos);
         let pk = mk.public.q.get_element();
-        let address = bitcoin::Address::p2wpkh(
-            &to_bitcoin_public_key(pk),
-            self.get_bitcoin_network()
-        ).expect("Cannot panic because `to_bitcoin_public_key` creates a compressed address");
+        let address =
+            bitcoin::Address::p2wpkh(&to_bitcoin_public_key(pk), self.get_bitcoin_network())
+                .expect(
+                    "Cannot panic because `to_bitcoin_public_key` creates a compressed address",
+                );
 
         self.addresses_derivation_map
             .insert(address.to_string(), AddressDerivation { mk, pos });
@@ -391,11 +415,11 @@ impl Wallet {
         for i in 0..self.last_derived_pos {
             let (pos, mk) = Self::derive_new_key(&self.private_share, i);
 
-            let address =
-                bitcoin::Address::p2wpkh(
-                    &to_bitcoin_public_key(mk.public.q.get_element()),
-                    self.get_bitcoin_network()
-                ).expect("Cannot panic because `to_bitcoin_public_key` creates a compressed address");
+            let address = bitcoin::Address::p2wpkh(
+                &to_bitcoin_public_key(mk.public.q.get_element()),
+                self.get_bitcoin_network(),
+            )
+            .expect("Cannot panic because `to_bitcoin_public_key` creates a compressed address");
 
             self.addresses_derivation_map
                 .insert(address.to_string(), AddressDerivation { mk, pos });
@@ -417,12 +441,13 @@ impl Wallet {
     }
 
     // TODO: handle fees
+    // Select all txin enough to pay the amount
     pub fn select_tx_in(&self, amount_btc: f32) -> Vec<GetListUnspentResponse> {
         // greedy selection
         let list_unspent: Vec<GetListUnspentResponse> = self
             .get_all_addresses_balance()
             .into_iter()
-//            .filter(|b| b.confirmed > 0)
+            //            .filter(|b| b.confirmed > 0)
             .map(|a| self.list_unspent_for_addresss(a.address.to_string()))
             .flatten()
             .sorted_by(|a, b| a.value.partial_cmp(&b.value).unwrap())
@@ -457,19 +482,21 @@ impl Wallet {
 
     /* PRIVATE */
     fn list_unspent_for_addresss(&self, address: String) -> Vec<GetListUnspentResponse> {
-        // let mut client = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
-
-        // let resp = client.get_list_unspent(&address).unwrap();
-        let unspent_tx_url = BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "?unspentOnly=true";
-        let res = reqwest::blocking::get(unspent_tx_url).unwrap().text().unwrap();
-        let address_balance_with_tx_refs: BlockCypherAddress = serde_json::from_str(res.as_str()).unwrap();
+        let unspent_tx_url =
+            BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "?unspentOnly=true";
+        let res = reqwest::blocking::get(unspent_tx_url)
+            .unwrap()
+            .text()
+            .unwrap();
+        let address_balance_with_tx_refs: BlockCypherAddress =
+            serde_json::from_str(res.as_str()).unwrap();
         println!("{:#?}", address_balance_with_tx_refs);
-        // let unspent_txs = address_balance_with_tx_refs.txrefs;
         if let Some(tx_refs) = address_balance_with_tx_refs.txrefs {
-            tx_refs.iter()
+            tx_refs
+                .iter()
                 .map(|u| GetListUnspentResponse {
                     value: u.value,
-                    height: u.block_height  ,
+                    height: u.block_height,
                     tx_hash: u.tx_hash.clone(),
                     tx_pos: u.tx_output_n,
                     address: address.clone(),
@@ -481,7 +508,8 @@ impl Wallet {
     }
 
     fn get_address_balance(address: &bitcoin::Address) -> GetBalanceResponse {
-        let balance_url = BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "/balance";
+        let balance_url =
+            BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "/balance";
         let res = reqwest::blocking::get(balance_url).unwrap().text().unwrap();
         let address_balance: BlockCypherAddress = serde_json::from_str(res.as_str()).unwrap();
         println!("{:#?}", address_balance);
@@ -537,10 +565,8 @@ impl Wallet {
     }
 
     fn to_bitcoin_address(mk: &MasterKey2, network: Network) -> bitcoin::Address {
-        bitcoin::Address::p2wpkh(
-            &to_bitcoin_public_key(mk.public.q.get_element()),
-            network
-        ).expect("Cannot panic because `to_bitcoin_public_key` creates a compressed address")
+        bitcoin::Address::p2wpkh(&to_bitcoin_public_key(mk.public.q.get_element()), network)
+            .expect("Cannot panic because `to_bitcoin_public_key` creates a compressed address")
     }
 }
 
@@ -548,14 +574,14 @@ impl Wallet {
 fn to_bitcoin_public_key(pk: PK) -> bitcoin::util::key::PublicKey {
     bitcoin::util::key::PublicKey {
         compressed: true,
-        key: pk
+        key: pk,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bitcoin::hashes::sha256d;
     use bitcoin::hashes::hex::ToHex;
+    use bitcoin::hashes::sha256d;
     use bitcoin::hashes::Hash;
     use curv::arithmetic::traits::Converter;
     use curv::BigInt;
