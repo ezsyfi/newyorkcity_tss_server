@@ -43,7 +43,7 @@ use std::str::FromStr;
 const ELECTRUM_HOST: &str = "ec2-34-219-15-143.us-west-2.compute.amazonaws.com:60001";
 const WALLET_FILENAME: &str = "wallet/wallet.data";
 const BACKUP_FILENAME: &str = "wallet/backup.data";
-const BLOCK_CYPHER_HOST: &str = "https://api.blockcypher.com/v1/btc/test3";
+const BLOCK_CYPHER_HOST: &str = "https://api.blockcypher.com/v1/btc/test3"; 
 
 #[derive(Serialize, Deserialize)]
 pub struct SignSecondMsgRequest {
@@ -61,7 +61,7 @@ pub struct GetBalanceResponse {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct GetListUnspentResponse {
-    pub height: usize,
+    pub height: isize,
     pub tx_hash: String,
     pub tx_pos: usize,
     pub value: usize,
@@ -74,9 +74,16 @@ pub struct GetWalletBalanceResponse {
     pub unconfirmed: u64,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct AddressDerivation {
+    pub pos: u32,
+    pub mk: MasterKey2,
+}
+
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct BlockCypherAddress {
-    pub address: String,
+    address: String,
     total_received: u64,
     total_sent: u64,
     balance: u64,
@@ -85,12 +92,22 @@ struct BlockCypherAddress {
     n_tx: u64,
     unconfirmed_n_tx: u64,
     final_n_tx: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    txrefs: Option<Vec<BlockCypherTxRef>>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct AddressDerivation {
-    pub pos: u32,
-    pub mk: MasterKey2,
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+struct BlockCypherTxRef {
+    pub tx_hash: String,
+    pub block_height: isize,
+    pub tx_input_n: isize,
+    pub tx_output_n: usize,
+    pub value: usize,
+    pub ref_balance: u64,
+    pub spent: bool,
+    pub confirmations: u64,
+    pub confirmed: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -440,30 +457,38 @@ impl Wallet {
 
     /* PRIVATE */
     fn list_unspent_for_addresss(&self, address: String) -> Vec<GetListUnspentResponse> {
-        let mut client = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
+        // let mut client = ElectrumxClient::new(ELECTRUM_HOST).unwrap();
 
-        let resp = client.get_list_unspent(&address).unwrap();
-
-        resp.into_iter()
-            .map(|u| GetListUnspentResponse {
-                value: u.value,
-                height: u.height,
-                tx_hash: u.tx_hash,
-                tx_pos: u.tx_pos,
-                address: address.clone(),
-            })
-            .collect()
+        // let resp = client.get_list_unspent(&address).unwrap();
+        let unspent_tx_url = BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "?unspentOnly=true";
+        let res = reqwest::blocking::get(unspent_tx_url).unwrap().text().unwrap();
+        let address_balance_with_tx_refs: BlockCypherAddress = serde_json::from_str(res.as_str()).unwrap();
+        println!("{:#?}", address_balance_with_tx_refs);
+        // let unspent_txs = address_balance_with_tx_refs.txrefs;
+        if let Some(tx_refs) = address_balance_with_tx_refs.txrefs {
+            tx_refs.iter()
+                .map(|u| GetListUnspentResponse {
+                    value: u.value,
+                    height: u.block_height  ,
+                    tx_hash: u.tx_hash.clone(),
+                    tx_pos: u.tx_output_n,
+                    address: address.clone(),
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 
     fn get_address_balance(address: &bitcoin::Address) -> GetBalanceResponse {
         let balance_url = BLOCK_CYPHER_HOST.to_owned() + "/addrs/" + &address.to_string() + "/balance";
         let res = reqwest::blocking::get(balance_url).unwrap().text().unwrap();
-        let blockcypher_address_balance: BlockCypherAddress = serde_json::from_str(res.as_str()).unwrap();
-        println!("{:#?}", blockcypher_address_balance);
+        let address_balance: BlockCypherAddress = serde_json::from_str(res.as_str()).unwrap();
+        println!("{:#?}", address_balance);
 
         GetBalanceResponse {
-            confirmed: 0,
-            unconfirmed: 0,
+            confirmed: address_balance.balance,
+            unconfirmed: address_balance.unconfirmed_balance,
             address: address.to_string(),
         }
     }
