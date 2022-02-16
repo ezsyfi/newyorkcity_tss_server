@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "lldb",
             "request": "launch",
@@ -78,6 +79,31 @@
             "args": [
                 "wallet",
                 "-b"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'cli wallet send'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=cli",
+                    "--package=gotham-client"
+                ],
+                "filter": {
+                    "name": "cli",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "wallet",
+                "send",
+                "-a",
+                "0.0001",
+                "-t",
+                "tb1qvqst5xdyvgmfvqcq56prlvxyckz5jhsfe00svp"
             ],
             "cwd": "${workspaceFolder}"
         },

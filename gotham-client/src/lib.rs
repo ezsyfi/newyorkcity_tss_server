@@ -46,14 +46,14 @@ type Result<T> = std::result::Result<T, failure::Error>;
 
 #[derive(Debug)]
 pub struct ClientShim {
-    pub client: reqwest::Client,
+    pub client: reqwest::blocking::Client,
     pub auth_token: Option<String>,
     pub endpoint: String,
 }
 
 impl ClientShim {
     pub fn new(endpoint: String, auth_token: Option<String>) -> ClientShim {
-        let client = reqwest::Client::new();
+        let client = reqwest::blocking::Client::new();
         ClientShim {
             client,
             auth_token,
