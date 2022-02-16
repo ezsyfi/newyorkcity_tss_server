@@ -17,7 +17,6 @@ use bitcoin::{TxIn, TxOut, Txid};
 use curv::elliptic::curves::secp256_k1::{GE, PK};
 use curv::elliptic::curves::traits::ECPoint;
 use curv::BigInt;
-use electrumx_client::{electrumx_client::ElectrumxClient, interface::Electrumx};
 use kms::ecdsa::two_party::MasterKey2;
 use kms::ecdsa::two_party::*;
 use serde_json;

@@ -25,7 +25,7 @@ clap = { version = "2.32", features = ["yaml"] }
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 failure = "0.1.5"
 uuid = { version = "0.8.2", features = ["v4"] }
-electrumx_client = { git = "https://github.com/KZen-networks/rust-electrumx-client", tag = "bitcoin@0.20.0" }
+# electrumx_client = { git = "https://github.com/KZen-networks/rust-electrumx-client", tag = "bitcoin@0.20.0" }
 itertools = "0.10.3"
 hex = "0.4.3"
 bitcoin = "0.27.0"

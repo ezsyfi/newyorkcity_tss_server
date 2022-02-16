@@ -27,7 +27,6 @@ extern crate log;
 extern crate failure;
 
 extern crate bitcoin;
-extern crate electrumx_client;
 extern crate hex;
 extern crate itertools;
 extern crate uuid;
