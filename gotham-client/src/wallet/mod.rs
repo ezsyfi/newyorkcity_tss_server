@@ -441,7 +441,7 @@ impl Wallet {
 
     // TODO: handle fees
     // Select all txin enough to pay the amount
-    pub fn select_tx_in(&self, amount_btc: f32) -> Vec<GetListUnspentResponse> {
+    fn select_tx_in(&self, amount_btc: f32) -> Vec<GetListUnspentResponse> {
         // greedy selection
         let list_unspent: Vec<GetListUnspentResponse> = self
             .get_all_addresses_balance()
