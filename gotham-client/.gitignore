@@ -15,3 +15,6 @@ wallet/wallet.data
 escrow/client.backup
 escrow/escrow-sk.json
 escrow/sk-recovered.json
+
+# so that we don't include the cbingen artifact into source control
+libexample.h
