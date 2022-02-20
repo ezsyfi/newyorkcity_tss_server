@@ -10,7 +10,7 @@ edition = "2021"
 [lib]
 name = "client_lib"
 path = "src/lib.rs"
-# crate-type = ["staticlib", "cdylib"]
+crate-type = ["staticlib", "cdylib"]
 
 [[bin]]
 name = "cli"
@@ -33,7 +33,7 @@ config = "0.11.0"
 floating-duration = "0.1.2"
 curv = { package = "curv-kzen", version = "0.7" }
 # gmp-mpfr-sys = "1.4.7"
-
+openssl = { version = "*", features = ["vendored"] }
 
 
 [dependencies.zk-paillier]

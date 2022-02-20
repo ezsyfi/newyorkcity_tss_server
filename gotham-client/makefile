@@ -35,8 +35,8 @@ init:
 # ##############################################################################
 
 ## all: Compile iOS, Android and bindings targets
-all: ios macos android bindings
-
+all: ios android bindings
+# macos
 ## ios: Compile the iOS universal library
 ios: target/universal/release/libexample.a
 
