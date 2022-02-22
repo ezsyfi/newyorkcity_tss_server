@@ -453,18 +453,15 @@ impl Wallet {
             .into_iter()
             .collect();
 
-        let mut remaining: i64 = amount_btc as i64 * 100_000_000;
+        let mut remaining: i64 = (amount_btc * 100_000_000.0) as i64;
         let mut selected: Vec<GetListUnspentResponse> = Vec::new();
-
         for unspent in list_unspent {
             selected.push(unspent.clone());
             remaining -= unspent.value as i64;
-
             if remaining < 0 {
                 break;
             }
         }
-
         selected
     }
 
@@ -475,7 +472,7 @@ impl Wallet {
             .map(|a| self.list_unspent_for_addresss(a.to_string()))
             .flatten()
             .collect();
-
+        
         response
     }
 
@@ -489,7 +486,6 @@ impl Wallet {
             .unwrap();
         let address_balance_with_tx_refs: BlockCypherAddress =
             serde_json::from_str(res.as_str()).unwrap();
-        println!("{:#?}", address_balance_with_tx_refs);
         if let Some(tx_refs) = address_balance_with_tx_refs.txrefs {
             tx_refs
                 .iter()

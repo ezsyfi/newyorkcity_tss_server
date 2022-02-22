@@ -73,7 +73,7 @@ pub enum EcdsaStruct {
     RotateParty1Second,
 
     POS,
-}
+} 
 
 impl db::MPCStruct for EcdsaStruct {
     fn to_string(&self) -> String {
@@ -101,15 +101,17 @@ pub fn first_message(
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
     let id = Uuid::new_v4().to_string();
 
-    let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
+    let (key_gen_first_msg, 
+        comm_witness, 
+        ec_key_pair) = MasterKey1::key_gen_first_message();
 
     //save pos 0
     db::insert(
         &state.db,
-        &claim.sub,
-        &id,
-        &EcdsaStruct::POS,
-        &HDPos { pos: 0u32 },
+        &claim.sub, // auth token
+        &id, // uuid
+        &EcdsaStruct::POS, // Cryptography Ecliptic Curve
+        &HDPos { pos: 0u32 }, // HD wallet
     )?;
 
     db::insert(
@@ -119,6 +121,7 @@ pub fn first_message(
         &EcdsaStruct::KeyGenFirstMsg,
         &key_gen_first_msg,
     )?;
+
     db::insert(
         &state.db,
         &claim.sub,
@@ -126,6 +129,7 @@ pub fn first_message(
         &EcdsaStruct::CommWitness,
         &comm_witness,
     )?;
+
     db::insert(
         &state.db,
         &claim.sub,
@@ -156,6 +160,7 @@ pub fn second_message(
     let comm_witness: party_one::CommWitness =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CommWitness)?
             .ok_or(format_err!("No data for such identifier {}", id))?;
+
     let ec_key_pair: party_one::EcKeyPair =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EcKeyPair)?
             .ok_or(format_err!("No data for such identifier {}", id))?;
@@ -170,6 +175,7 @@ pub fn second_message(
         &EcdsaStruct::PaillierKeyPair,
         &paillier_key_pair,
     )?;
+
     db::insert(
         &state.db,
         &claim.sub,
@@ -197,6 +203,7 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCKeyGenFirstMsg,
         &cc_party_one_first_message,
     )?;
+
     db::insert(
         &state.db,
         &claim.sub,
@@ -204,6 +211,7 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCCommWitness,
         &cc_comm_witness,
     )?;
+    
     db::insert(
         &state.db,
         &claim.sub,
