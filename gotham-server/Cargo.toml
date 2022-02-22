@@ -61,5 +61,5 @@ tag = "v0.4.5"
 # [dependencies.serde_dynamodb]
 # git = "https://github.com/KZen-networks/serde_dynamodb"
 
-# [patch.crates-io]
-# rust-gmp = { version = "0.5.1", features = ["serde_support"], git = "https://github.com/KZen-networks/rust-gmp" }
+[patch.crates-io]
+rust-gmp = { version = "0.5.1", features = ["serde_support"], git = "https://github.com/KZen-networks/rust-gmp" }
