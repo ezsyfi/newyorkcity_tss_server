@@ -1,3 +1,7 @@
+# NOTES: The mobile client is re-created & developing at [here](https://github.com/ezsyfi/TSS-wallet-mobile). This repo is now only used to develop TSS server.
+
+
+
 [![Build Status](https://travis-ci.org/KZen-networks/gotham-city.svg?branch=master)](https://travis-ci.org/KZen-networks/gotham-city)
 
 Gotham City
