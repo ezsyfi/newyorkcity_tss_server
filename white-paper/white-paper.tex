@@ -176,7 +176,7 @@ Similarly, the Server can keep the encryption $c$ and use it as a backup for $x_
 We comment that a reciprocal treatment can be done for the client backup.
 
 \section{Code Architecture}
-In general, we try to maximize the amount of code we re-use. Our stack is built completely in Rust. At the bottom we use secp256k1 elliptic curve (EC) library \cite{secp}. On top we have a utility library that implements simple EC cryptographic primitives \cite{curv}. At the same level we also wrote a library for zero knowledge proofs over Paillier cryptosystem \cite{zk-paillier} that uses another library for basic Paillier operations \cite{paillier}. On top we have our 2P-ECDSA library \cite{ecdsa} that consumes Paillier and ECC that we implemented below. higher than that we have a key management system (KMS) library \cite{kms} that packs 2P-ECDSA communication messages and adds the concept of master key with rotation, 2P-HD and recovery. Finally we have a wallet app with network, DB and full node access \cite{gotham}. We construct Bitcoin transactions using Rust Bitcoin library \cite{rust-bitcoin}
+In general, we try to maximize the amount of code we re-use. Our stack is built completely in Rust. At the bottom we use secp256k1 elliptic curve (EC) library \cite{secp}. On top we have a utility library that implements simple EC cryptographic primitives \cite{curv}. At the same level we also wrote a library for zero knowledge proofs over Paillier cryptosystem \cite{zk-paillier} that uses another library for basic Paillier operations \cite{paillier}. On top we have our 2P-ECDSA library \cite{ecdsa} that consumes Paillier and ECC that we implemented below. higher than that we have a key management system (KMS) library \cite{kms} that packs 2P-ECDSA communication messages and adds the concept of master key with rotation, 2P-HD and recovery. Finally we have a wallet app with network, DB and full node access \cite{newyork}. We construct Bitcoin transactions using Rust Bitcoin library \cite{rust-bitcoin}
 
 \section{Challenges}
 Achieving good performances without compromising on security represents the main challenge. For a good user experience we need fast signing and key derivation times since these operations are reoccurring. Key Generation and backup are done once but still need to be reasonably fast. To achieve this we optimized on multiple fronts:  We minimized communication rounds by choosing zero-knowledge proofs that can run non-interactively (unless the communication tradeoff was worse). We aggregated different steps of the protocols into the same message whenever it was possible without harming security. We used software optimizations like parallelism of different Paillier encryptions. We used mathematical best practices like using Chinese Reminder Theorem for Paillier encryptions. Finally, we used native Rust all the way to not suffer when bridging between languages. 
@@ -226,8 +226,8 @@ https://github.com/mortendahl/rust-paillier
 https://github.com/KZen-networks/multi-party-ecdsa
 \bibitem{kms}
 https://github.com/KZen-networks/kms-secp256k1
-\bibitem{gotham}
-https://github.com/KZen-networks/gotham-city
+\bibitem{newyork}
+https://github.com/KZen-networks/newyork-city
 \bibitem{rust-bitcoin}
 https://github.com/rust-bitcoin/rust-bitcoin
 \bibitem{bip32}
