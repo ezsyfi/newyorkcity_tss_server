@@ -1,12 +1,5 @@
 #![allow(non_snake_case)]
-// Gotham-city
-//
-// Copyright 2018 by Kzen Networks (kzencorp.com)
-// Gotham city is free software: you can redistribute
-// it and/or modify it under the terms of the GNU General Public
-// License as published by the Free Software Foundation, either
-// version 3 of the License, or (at your option) any later version.
-//
+ 
 
 use super::super::Result;
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
@@ -85,7 +78,7 @@ impl db::MPCStruct for EcdsaStruct {
         if self.to_string() == "Party1MasterKey" {
             format!("{}_{}", env, self.to_string())
         } else {
-            format!("{}-gotham-{}", env, self.to_string())
+            format!("{}-newyork-{}", env, self.to_string())
         }
     }
 

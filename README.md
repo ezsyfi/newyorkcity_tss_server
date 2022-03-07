@@ -2,23 +2,23 @@
 
 
 
-[![Build Status](https://travis-ci.org/KZen-networks/gotham-city.svg?branch=master)](https://travis-ci.org/KZen-networks/gotham-city)
+[![Build Status](https://travis-ci.org/KZen-networks/newyork-city.svg?branch=master)](https://travis-ci.org/KZen-networks/newyork-city)
 
-Gotham City
+Newyork City
 =====================================
-Gotham city is a fully functional client/server application of a minimalist decentralized HD wallet using 2 party ECDSA.
+Newyork city is a fully functional client/server application of a minimalist decentralized HD wallet using 2 party ECDSA.
 
 Supported Blockchain(s) / Coin(s)
 -------
 ### Server
-Gotham **server** is coin / blockchain agnostic but Elliptic Curve specific.
+Newyork **server** is coin / blockchain agnostic but Elliptic Curve specific.
 
 List of supported Curve(s):
 
  * secp256k1
 
 ### Client
-Gotham **client** is coin / blockchain specific.
+Newyork **client** is coin / blockchain specific.
 
 List of supported Coin(s):
 
@@ -31,7 +31,7 @@ List of supported Coin(s):
 
 Disclaimer
 -------
-### **USE AT YOUR OWN RISK, we are not responsible for software/hardware and/or any transactional issues that may occur while using Gotham city.**
+### **USE AT YOUR OWN RISK, we are not responsible for software/hardware and/or any transactional issues that may occur while using Newyork city.**
 
 Project Status
 -------
@@ -40,10 +40,10 @@ The project is currently work in progress. For more information you can [email u
 Elements
 -------
 
-|                                                 | Gotham Server                                | Gotham Client                                |
+|                                                 | Newyork Server                                | Newyork Client                                |
 | -------------------------------------------- | -------------------------------------------- |--------------------------------------------
 | Description | RESTful web service exposing APIs for two party ECDSA key generation and signing | Bitcoin minimalist decentralized wallet CLI app |
-| Instructions | [View](gotham-server/README.md) | [View](gotham-client/README.md) |
+| Instructions | [View](newyork-server/README.md) | [View](newyork-client/README.md) |
 
 Project Description
 -------
@@ -83,7 +83,7 @@ Bitcoin is utilizing ECDSA as the signing scheme. There is an active line of res
 ### Comperative Performance
 The comparison was done on an Intel i9-8950HK (2.9GHz) using localhost for server (no real network). The numbers are mean for 20 runs of 2P-ECDSA KeyGen and 50 runs for 2P-ECDSA Signing. Standard deviation is inconsistent but for both implementations it is order of magnitude smaller than mean value.
 
-|        Implementation         |   Gotham city (this repo)    |    [Unbound](https://github.com/unbound-tech/blockchain-crypto-mpc)       | 
+|        Implementation         |   Newyork city (this repo)    |    [Unbound](https://github.com/unbound-tech/blockchain-crypto-mpc)       | 
 |-------------------------------|------------------------|------------------------|
 | 2P-ECDSA KeyGen                      |        1.05 s            |      **0.813** s           |
 |    2P-ECDSA Signing    |      **0.153** s        |      0.206 s     |
@@ -91,7 +91,7 @@ The comparison was done on an Intel i9-8950HK (2.9GHz) using localhost for serve
 
 License
 -------
-Gotham City is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
+Newyork City is released under the terms of the GPL-3.0 license. See [LICENSE](LICENSE) for more information.
 
 Contact
 -------
