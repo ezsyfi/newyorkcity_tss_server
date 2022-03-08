@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod test_suites {
 
     use super::super::routes::ecdsa;
     use super::super::server;
