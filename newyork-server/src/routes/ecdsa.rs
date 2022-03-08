@@ -1,5 +1,4 @@
 #![allow(non_snake_case)]
- 
 
 use super::super::Result;
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
@@ -66,7 +65,7 @@ pub enum EcdsaStruct {
     RotateParty1Second,
 
     POS,
-} 
+}
 
 impl db::MPCStruct for EcdsaStruct {
     fn to_string(&self) -> String {
@@ -94,16 +93,14 @@ pub fn first_message(
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
     let id = Uuid::new_v4().to_string();
 
-    let (key_gen_first_msg, 
-        comm_witness, 
-        ec_key_pair) = MasterKey1::key_gen_first_message();
+    let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
 
     //save pos 0
     db::insert(
         &state.db,
-        &claim.sub, // auth token
-        &id, // uuid
-        &EcdsaStruct::POS, // Cryptography Ecliptic Curve
+        &claim.sub,           // auth token
+        &id,                  // uuid
+        &EcdsaStruct::POS,    // Cryptography Ecliptic Curve
         &HDPos { pos: 0u32 }, // HD wallet
     )?;
 
@@ -204,7 +201,7 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCCommWitness,
         &cc_comm_witness,
     )?;
-    
+
     db::insert(
         &state.db,
         &claim.sub,
@@ -416,12 +413,10 @@ pub fn rotate_second(
     claim: Claims,
     party2_first_message: Json<coin_flip_optimal_rounds::Party2FirstMessage<GE>>,
 ) -> Result<
-    Json<
-        (
-            coin_flip_optimal_rounds::Party1SecondMessage<GE>,
-            party1::RotationParty1Message1,
-        ),
-    >,
+    Json<(
+        coin_flip_optimal_rounds::Party1SecondMessage<GE>,
+        party1::RotationParty1Message1,
+    )>,
 > {
     let party_one_master_key = get_mk(&state, claim.clone(), &id)?;
 

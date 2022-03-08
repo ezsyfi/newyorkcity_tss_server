@@ -1,5 +1,3 @@
- 
-
 use config;
 use rocket;
 use rocket::{Request, Rocket};

@@ -1,4 +1,3 @@
- 
 #[cfg(test)]
 mod tests {
 
@@ -10,18 +9,18 @@ mod tests {
     use rocket::http::Status;
     use rocket::local::Client;
     use serde_json;
-    use zk_paillier::zkproofs::SALT_STRING;
     use std::env;
     use std::time::Instant;
+    use zk_paillier::zkproofs::SALT_STRING;
 
-    use curv::elliptic::curves::secp256_k1::GE;
     use curv::arithmetic::traits::Converter;
     use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
+    use curv::elliptic::curves::secp256_k1::GE;
     use curv::BigInt;
+    use floating_duration::TimeFormat;
     use kms::chain_code::two_party as chain_code;
     use kms::ecdsa::two_party::*;
     use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
-    use floating_duration::TimeFormat;
 
     fn key_gen(client: &Client) -> (String, MasterKey2) {
         time_test!();
@@ -35,7 +34,10 @@ mod tests {
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
-        println!("{} Network/Server: party1 first message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Network/Server: party1 first message",
+            TimeFormat(start.elapsed())
+        );
 
         let res_body = response.body_string().unwrap();
         let (id, kg_party_one_first_message): (String, party_one::KeyGenFirstMsg) =
@@ -46,7 +48,10 @@ mod tests {
         let (kg_party_two_first_message, kg_ec_key_pair_party2) =
             MasterKey2::key_gen_first_message();
 
-        println!("{} Client: party2 first message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Client: party2 first message",
+            TimeFormat(start.elapsed())
+        );
         /*************** END: FIRST MESSAGE ***************/
 
         /*************** START: SECOND MESSAGE ***************/
@@ -61,7 +66,10 @@ mod tests {
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
-        println!("{} Network/Server: party1 second message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Network/Server: party1 second message",
+            TimeFormat(start.elapsed())
+        );
 
         let res_body = response.body_string().unwrap();
         let kg_party_one_second_message: party1::KeyGenParty1Message2 =
@@ -76,10 +84,12 @@ mod tests {
         );
         assert!(key_gen_second_message.is_ok());
 
-        println!("{} Client: party2 second message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Client: party2 second message",
+            TimeFormat(start.elapsed())
+        );
 
-        let (_party_two_second_message, party_two_paillier) =
-            key_gen_second_message.unwrap();
+        let (_party_two_second_message, party_two_paillier) = key_gen_second_message.unwrap();
 
         /*************** END: SECOND MESSAGE ***************/
 
@@ -105,7 +115,10 @@ mod tests {
         let (cc_party_two_first_message, cc_ec_key_pair2) =
             chain_code::party2::ChainCode2::chain_code_first_message();
 
-        println!("{} Client: party2 chain code first message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Client: party2 chain code first message",
+            TimeFormat(start.elapsed())
+        );
         /*************** END: CHAINCODE FIRST MESSAGE ***************/
 
         /*************** START: CHAINCODE SECOND MESSAGE ***************/
@@ -136,7 +149,10 @@ mod tests {
                 &cc_party_one_second_message,
             );
 
-        println!("{} Client: party2 chain code second message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Client: party2 chain code second message",
+            TimeFormat(start.elapsed())
+        );
         /*************** END: CHAINCODE SECOND MESSAGE ***************/
 
         let start = Instant::now();
@@ -146,7 +162,10 @@ mod tests {
         )
         .chain_code;
 
-        println!("{} Client: party2 chain code second message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Client: party2 chain code second message",
+            TimeFormat(start.elapsed())
+        );
         /*************** END: CHAINCODE COMPUTE MESSAGE ***************/
 
         let start = Instant::now();
@@ -212,7 +231,10 @@ mod tests {
             &message,
         );
 
-        println!("{} Client: party2 sign second message", TimeFormat(start.elapsed()));
+        println!(
+            "{} Client: party2 sign second message",
+            TimeFormat(start.elapsed())
+        );
 
         let request: ecdsa::SignSecondMsgRequest = ecdsa::SignSecondMsgRequest {
             message,

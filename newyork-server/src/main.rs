@@ -1,5 +1,3 @@
- 
-
 use server_lib::server;
 
 fn main() {
