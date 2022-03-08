@@ -6,7 +6,6 @@ use serde;
 
 pub enum DB {
     Local(rocksdb::DB),
-    // AWS(rusoto_dynamodb::DynamoDbClient, String),
 }
 
 pub trait MPCStruct {
@@ -30,11 +29,6 @@ where
     T: serde::ser::Serialize,
 {
     match db {
-        // DB::AWS(dynamodb_client, env) => {
-        //     let table_name = name.to_table_name(env);
-        //     aws::dynamodb::insert(&dynamodb_client, user_id, id, &table_name, v)?;
-        //     Ok(())
-        // }
         DB::Local(rocksdb_client) => {
             let identifier = idify(user_id, id, name);
             let v_string = serde_json::to_string(&v).unwrap();
@@ -49,17 +43,6 @@ where
     T: serde::de::DeserializeOwned,
 {
     match db {
-        // DB::AWS(dynamodb_client, env) => {
-        //     let table_name = name.to_table_name(env);
-        //     println!("table_name = {}", table_name);
-        //     let require_customer_id = name.require_customer_id();
-        //     println!("require_customer_id = {}", require_customer_id);
-        //     println!("user_id = {}", user_id);
-        //     println!("id = {}", id);
-        //     let res: Option<T> = aws::dynamodb::get(&dynamodb_client, user_id, id, table_name, require_customer_id)?;
-        //     println!("res.is_none() = {}", res.is_none());
-        //     Ok(res)
-        // }
         DB::Local(rocksdb_client) => {
             let identifier = idify(user_id, id, name);
             debug!("Getting from db ({})", identifier);

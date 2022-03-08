@@ -3,9 +3,6 @@ use rocket;
 use rocket::{Request, Rocket};
 use rocksdb;
 
-// use rusoto_core::Region;
-// use rusoto_dynamodb::DynamoDbClient;
-
 use super::routes::*;
 use super::storage::db;
 use super::Config;
@@ -62,7 +59,6 @@ pub fn get_server() -> Rocket {
     let db_config = Config {
         db: get_db(settings.clone()),
     };
-
     let auth_config = AuthConfig::load(settings.clone());
 
     rocket::ignite()
@@ -114,25 +110,8 @@ fn get_db(settings: HashMap<String, String>) -> db::DB {
         .unwrap_or(&"local".to_string())
         .to_uppercase();
     let db_type = db_type_string.as_str();
-    // let env = settings
-    //     .get("env")
-    //     .unwrap_or(&"dev".to_string())
-    //     .to_string();
 
     match db_type {
-        // "AWS" => {
-        //     let region_option = settings.get("aws_region");
-        //     match region_option {
-        //         Some(s) => {
-        //             let region_res = Region::from_str(&s);
-        //             match region_res {
-        //                 Ok(region) => db::DB::AWS(DynamoDbClient::new(region), env),
-        //                 Err(_e) => panic!("Set 'DB = AWS' but 'region' is not a valid value"),
-        //             }
-        //         }
-        //         None => panic!("Set 'DB = AWS' but 'region' is empty"),
-        //     }
-        // }
         _ => db::DB::Local(rocksdb::DB::open_default("./db").unwrap()),
     }
 }
