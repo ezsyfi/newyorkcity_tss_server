@@ -7,6 +7,5 @@ pub struct PublicKey {
     pub kty: String,
 }
 
-pub mod cognito;
 pub mod jwt;
 pub mod passthrough;
