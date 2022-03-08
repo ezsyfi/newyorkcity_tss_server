@@ -1,5 +1,3 @@
- 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicKey {
     pub kid: String,

@@ -1,4 +1,3 @@
- 
 use super::super::Result;
 use rocksdb;
 use serde;
@@ -39,10 +38,7 @@ where
         DB::Local(rocksdb_client) => {
             let identifier = idify(user_id, id, name);
             let v_string = serde_json::to_string(&v).unwrap();
-            rocksdb_client.put(
-                identifier.as_bytes(),
-                v_string.as_bytes(),
-            )?;
+            rocksdb_client.put(identifier.as_bytes(), v_string.as_bytes())?;
             Ok(())
         }
     }

@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use jsonwebtoken::DecodingKey;
 
- 
 use super::super::jwt::{decode, decode_header, Algorithm, Header, Validation};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -1,5 +1,3 @@
- 
-
 use super::jwt::Claims;
 
 pub fn get_empty_claim() -> Claims {
