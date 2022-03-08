@@ -18,8 +18,8 @@ RUN apt-get update && apt-get install -y libclang-dev && rm -rf /var/lib/apt/lis
 
 # Copy bin & config files
 COPY --from=builder /app/target/release .
-COPY --from=build /app/Rocket.toml .
+COPY --from=builder /app/Rocket.toml .
 
 EXPOSE 8001
 
-CMD ["./app/server_exec"]
+CMD ["./server_exec"]
