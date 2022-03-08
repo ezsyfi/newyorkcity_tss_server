@@ -23,3 +23,5 @@ COPY --from=builder /app/Rocket.toml .
 EXPOSE 8001
 
 CMD ["./server_exec"]
+
+
