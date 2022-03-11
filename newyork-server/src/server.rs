@@ -57,9 +57,9 @@ fn not_found(req: &Request) -> String {
 pub fn get_server() -> Rocket {
     let settings = get_settings_as_map();
     let db_config = Config {
-        db: get_db(settings.clone()),
+        db: get_db(),
     };
-    let auth_config = AuthConfig::load(settings.clone());
+    let auth_config = AuthConfig::load(settings);
 
     rocket::ignite()
         .register(catchers![internal_error, not_found, bad_request])
@@ -104,14 +104,6 @@ fn get_settings_as_map() -> HashMap<String, String> {
     settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
-fn get_db(settings: HashMap<String, String>) -> db::DB {
-    let db_type_string = settings
-        .get("db")
-        .unwrap_or(&"local".to_string())
-        .to_uppercase();
-    let db_type = db_type_string.as_str();
-
-    match db_type {
-        _ => db::DB::Local(rocksdb::DB::open_default("./db").unwrap()),
-    }
+fn get_db() -> db::DB {
+    db::DB::Local(rocksdb::DB::open_default("./db").unwrap())
 }
