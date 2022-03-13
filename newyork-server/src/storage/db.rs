@@ -11,10 +11,6 @@ pub enum DB {
 pub trait MPCStruct {
     fn to_string(&self) -> String;
 
-    fn to_table_name(&self, env: &str) -> String {
-        format!("{}_{}", env, self.to_string())
-    }
-
     fn require_customer_id(&self) -> bool {
         true
     }
