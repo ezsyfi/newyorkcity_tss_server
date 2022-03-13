@@ -73,15 +73,6 @@ impl db::MPCStruct for EcdsaStruct {
         format!("{:?}", self)
     }
 
-    // backward compatibility
-    fn to_table_name(&self, env: &str) -> String {
-        if self.to_string() == "Party1MasterKey" {
-            format!("{}_{}", env, self.to_string())
-        } else {
-            format!("{}-newyork-{}", env, self.to_string())
-        }
-    }
-
     fn require_customer_id(&self) -> bool {
         self.to_string() == "Party1MasterKey"
     }
@@ -156,11 +147,11 @@ pub fn second_message(
 
     let comm_witness: party_one::CommWitness =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CommWitness)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
 
     let ec_key_pair: party_one::EcKeyPair =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EcKeyPair)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No EcKeyPair for such identifier {}", id))?;
 
     let (kg_party_one_second_message, paillier_key_pair, party_one_private) =
         MasterKey1::key_gen_second_message(comm_witness, &ec_key_pair, &dlog_proof.0);
@@ -244,7 +235,7 @@ pub fn chain_code_second_message(
 
     let cc_comm_witness: CommWitness<GE> =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CCCommWitness)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No CCCommWitness for such identifier {}", id))?;
 
     let party1_cc = chain_code::party1::ChainCode1::chain_code_second_message(
         cc_comm_witness,
@@ -266,7 +257,7 @@ pub fn chain_code_compute_message(
 ) -> Result<Json<()>> {
     let cc_ec_key_pair_party1: EcKeyPair<GE> =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CCEcKeyPair)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No CCEcKeyPair for such identifier {}", id))?;
     let party1_cc = chain_code::party1::ChainCode1::compute_chain_code(
         &cc_ec_key_pair_party1,
         cc_party2_public,
@@ -279,23 +270,23 @@ pub fn chain_code_compute_message(
 
 pub fn master_key(state: State<Config>, claim: Claims, id: String) -> Result<()> {
     let party2_public: GE = db::get(&state.db, &claim.sub, &id, &EcdsaStruct::Party2Public)?
-        .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+        .ok_or_else(|| format_err!("No Party2Public for such identifier {}", id))?;
 
     let paillier_key_pair: party_one::PaillierKeyPair =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::PaillierKeyPair)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No PaillierKeyPair for such identifier {}", id))?;
 
     let party1_cc: chain_code::party1::ChainCode1 =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CC)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No CC for such identifier {}", id))?;
 
     let party_one_private: party_one::Party1Private =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::Party1Private)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No Party1Private for such identifier {}", id))?;
 
     let comm_witness: party_one::CommWitness =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CommWitness)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
 
     let masterKey = MasterKey1::set_master_key(
         &party1_cc.chain_code,
@@ -363,7 +354,7 @@ pub fn sign_second(
 ) -> Result<Json<party_one::SignatureRecid>> {
     let master_key: MasterKey1 =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::Party1MasterKey)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))?;
 
     let x: BigInt = request.x_pos_child_key.clone();
     let y: BigInt = request.y_pos_child_key.clone();
@@ -372,11 +363,11 @@ pub fn sign_second(
 
     let eph_ec_key_pair_party1: party_one::EphEcKeyPair =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EphEcKeyPair)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No EphEcKeyPair for such identifier {}", id))?;
 
     let eph_key_gen_first_message_party_two: party_two::EphKeyGenFirstMsg =
         db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EphKeyGenFirstMsg)?
-            .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+            .ok_or_else(|| format_err!("No EphKeyGenFirstMsg for such identifier {}", id))?;
 
     let signature_with_recid = child_master_key.sign_second_message(
         &request.party_two_sign_message,
@@ -394,7 +385,7 @@ pub fn sign_second(
 
 pub fn get_mk(state: &State<Config>, claim: Claims, id: &String) -> Result<MasterKey1> {
     db::get(&state.db, &claim.sub, id, &EcdsaStruct::Party1MasterKey)?
-        .ok_or_else(|| format_err!("No data for such identifier {}", id))
+        .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))
 }
 
 #[post("/ecdsa/rotate/<id>/first", format = "json")]
@@ -445,7 +436,7 @@ pub fn rotate_second(
         &id,
         &EcdsaStruct::RotateCommitMessage1M,
     )?
-    .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+    .ok_or_else(|| format_err!("No RotateCommitMessage1M for such identifier {}", id))?;
 
     let r1: Secp256k1Scalar = db::get(
         &state.db,
@@ -453,7 +444,7 @@ pub fn rotate_second(
         &id,
         &EcdsaStruct::RotateCommitMessage1R,
     )?
-    .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+    .ok_or_else(|| format_err!("No RotateCommitMessage1R for such identifier {}", id))?;
 
     let (party1_second_message, random1) =
         Rotation1::key_rotate_second_message(&party2_first_message.0, &m1, &r1);
@@ -485,6 +476,6 @@ pub fn rotate_second(
 #[post("/ecdsa/<id>/recover", format = "json")]
 pub fn recover(state: State<Config>, claim: Claims, id: String) -> Result<Json<u32>> {
     let pos_old: u32 = db::get(&state.db, &claim.sub, &id, &EcdsaStruct::POS)?
-        .ok_or_else(|| format_err!("No data for such identifier {}", id))?;
+        .ok_or_else(|| format_err!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
 }
