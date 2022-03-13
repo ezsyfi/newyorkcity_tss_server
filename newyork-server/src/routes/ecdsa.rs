@@ -120,11 +120,6 @@ pub fn first_message(
         &ec_key_pair,
     )?;
 
-    // println!("key_gen_first_msg {:?}", key_gen_first_msg);
-    // println!("comm_witness {:?}", comm_witness);
-    // println!("ec_key_pair {:?}", key_gen_first_msg);
-    // We have HD wallet pos = 0, key_gen_first_msg, comm_witness, ec_key_pair in the first route
-
     Ok(Json((id, key_gen_first_msg)))
 }
 

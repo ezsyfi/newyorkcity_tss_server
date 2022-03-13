@@ -1,4 +1,3 @@
-use config;
 use rocket;
 use rocket::{Request, Rocket};
 use rocksdb;
@@ -55,11 +54,9 @@ fn not_found(req: &Request) -> String {
 }
 
 pub fn get_server() -> Rocket {
-    let settings = get_settings_as_map();
     let db_config = Config {
         db: get_db(),
     };
-    let auth_config = AuthConfig::load(settings);
 
     rocket::ignite()
         .register(catchers![internal_error, not_found, bad_request])
@@ -86,22 +83,6 @@ pub fn get_server() -> Rocket {
             ],
         )
         .manage(db_config)
-        .manage(auth_config)
-}
-
-fn get_settings_as_map() -> HashMap<String, String> {
-    let config_file = include_str!("../Settings.toml");
-    let mut settings = config::Config::default();
-    settings
-        .merge(config::File::from_str(
-            config_file,
-            config::FileFormat::Toml,
-        ))
-        .unwrap()
-        .merge(config::Environment::new())
-        .unwrap();
-
-    settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
 fn get_db() -> db::DB {
