@@ -84,5 +84,12 @@ pub fn get_server() -> Rocket {
 }
 
 fn get_db() -> db::DB {
-    db::DB::Local(rocksdb::DB::open_default("./db").unwrap())
+    print!("Init RocksDB connection");
+    match rocksdb::DB::open_default("./db") {
+        Ok(db) => db::DB::Local(db),
+        Err(e) => {
+            println!("Error: {}", e);
+            db::DB::ConnError("Failed to open rocksdb, please check your configuration".to_string())
+        }
+    }
 }

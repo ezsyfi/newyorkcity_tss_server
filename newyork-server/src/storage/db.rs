@@ -2,10 +2,9 @@ use super::super::Result;
 use rocksdb;
 use serde;
 
-// use super::aws;
-
 pub enum DB {
     Local(rocksdb::DB),
+    ConnError(String),
 }
 
 pub trait MPCStruct {
@@ -31,6 +30,9 @@ where
             rocksdb_client.put(identifier.as_bytes(), v_string.as_bytes())?;
             Ok(())
         }
+        DB::ConnError(msg) => {
+            panic!("{}", msg);
+        }
     }
 }
 
@@ -49,6 +51,9 @@ where
                 Some(vec) => Ok(serde_json::from_slice(&vec).unwrap()),
                 None => Ok(None),
             }
+        }
+        DB::ConnError(msg) => {
+            panic!("{}", msg);
         }
     }
 }
