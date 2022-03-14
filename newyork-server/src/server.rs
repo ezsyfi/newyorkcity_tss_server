@@ -2,6 +2,8 @@ use rocket;
 use rocket::{Request, Rocket};
 use rocksdb;
 
+use crate::utils::settings::get_hcmc_host;
+
 use super::routes::*;
 use super::storage::db;
 use super::Config;
@@ -54,7 +56,12 @@ fn not_found(req: &Request) -> String {
 }
 
 pub fn get_server() -> Rocket {
-    let db_config = Config { db: get_db() };
+    let settings = get_settings_as_map();
+    let hcmc_config = get_hcmc_host(settings).unwrap();
+    let app_config = Config { 
+        db: get_db(),
+        hcmc: hcmc_config,
+     };
 
     rocket::ignite()
         .register(catchers![internal_error, not_found, bad_request])
@@ -80,7 +87,22 @@ pub fn get_server() -> Rocket {
                 // eddsa::sign_second,
             ],
         )
-        .manage(db_config)
+        .manage(app_config)
+}
+
+fn get_settings_as_map() -> HashMap<String, String> {
+    let config_file = include_str!("../Settings.toml");
+    let mut settings = config::Config::default();
+    settings
+        .merge(config::File::from_str(
+            config_file,
+            config::FileFormat::Toml,
+        ))
+        .unwrap()
+        .merge(config::Environment::new())
+        .unwrap();
+
+    settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
 fn get_db() -> db::DB {

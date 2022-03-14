@@ -23,9 +23,11 @@ pub mod routes;
 pub mod server;
 pub mod storage;
 pub mod tests;
+pub mod utils;
 
 type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Config {
     pub db: storage::db::DB,
+    pub hcmc: utils::settings::HcmcConfig
 }
