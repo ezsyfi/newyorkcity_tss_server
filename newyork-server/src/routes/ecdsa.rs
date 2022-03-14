@@ -2,6 +2,8 @@
 
 use std::fmt::Debug;
 
+use crate::utils::requests::{get, post, HttpClient};
+
 use super::super::Result;
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
 use curv::cryptographic_primitives::twoparty::coin_flip_optimal_rounds;
@@ -19,7 +21,7 @@ use rocket::State;
 use rocket_contrib::json::Json;
 use uuid::Uuid;
 
-use super::super::auth::jwt::AuthPayload;
+use super::super::auth::guards::AuthPayload;
 use super::super::storage::db;
 use super::super::Config;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -78,13 +80,29 @@ impl db::MPCStruct for EcdsaStruct {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HcmcMasterKey {
+    pub master_key: String,
+}
+
 #[post("/ecdsa/keygen/first", format = "json")]
 pub fn first_message(
     state: State<Config>,
     auth_payload: AuthPayload,
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
     let id = Uuid::new_v4().to_string();
-    println!("endpointttttttt {}", &state.hcmc.endpoint);
+    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
+
+    let check_token_res = get(&http_client, "/api/v1/storage/valid")
+        .bearer_auth(&auth_payload.token)
+        .send();
+    let resp = match check_token_res {
+        Ok(v) => v,
+        Err(e) => panic!("{}", e),
+    };
+    if !resp.status().is_success() {
+        panic!("Failed to validate user's token {:#?}", resp.text().unwrap());
+    }
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
 
     //save pos 0
@@ -240,17 +258,35 @@ pub fn chain_code_second_message(
 
     let party2_pub = &cc_party_two_first_message_d_log_proof.pk;
 
-    chain_code_compute_message(state, auth_payload, id, party2_pub)?;
+    let master_key = chain_code_compute_message(&state, &auth_payload, id, party2_pub)?;
+    let master_key_json = match serde_json::to_string(&master_key) {
+        Ok(mk) => mk,
+        Err(_) => panic!("Error while parsing master key to json"),
+    };
+    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
+    let check_token_res = post(&http_client, "/api/v1/storage/secret")
+        .bearer_auth(&auth_payload.token)
+        .json(&HcmcMasterKey {
+            master_key: master_key_json,
+        })
+        .send();
+    let resp = match check_token_res {
+        Ok(v) => v,
+        Err(e) => panic!("{}", e),
+    };
+    if !resp.status().is_success() {
+        panic!("Failed to store user's master key {:#?}", resp.text().unwrap());
+    }
     Ok(Json(party1_cc))
 }
 
 pub fn chain_code_compute_message(
-    state: State<Config>,
-    auth_payload: AuthPayload,
+    state: &State<Config>,
+    auth_payload: &AuthPayload,
     id: String,
     cc_party2_public: &GE,
-) -> Result<Json<()>> {
+) -> Result<MasterKey1> {
     let cc_ec_key_pair_party1: EcKeyPair<GE> = db::get(
         &state.db,
         &auth_payload.user_id,
@@ -270,11 +306,14 @@ pub fn chain_code_compute_message(
         &EcdsaStruct::CC,
         &party1_cc,
     )?;
-    master_key(state, auth_payload, id)?;
-    Ok(Json(()))
+    master_key(state, auth_payload, id)
 }
 
-pub fn master_key(state: State<Config>, auth_payload: AuthPayload, id: String) -> Result<()> {
+pub fn master_key(
+    state: &State<Config>,
+    auth_payload: &AuthPayload,
+    id: String,
+) -> Result<MasterKey1> {
     let party2_public: GE = db::get(
         &state.db,
         &auth_payload.user_id,
@@ -325,7 +364,9 @@ pub fn master_key(state: State<Config>, auth_payload: AuthPayload, id: String) -
         &id,
         &EcdsaStruct::Party1MasterKey,
         &masterKey,
-    )
+    )?;
+
+    Ok(masterKey)
 }
 
 #[post(
