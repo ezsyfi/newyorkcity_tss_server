@@ -1,2 +1,2 @@
-HCMC_HOST = "127.0.0.1"
+HCMC_HOST = "http://localhost"
 HCMC_PORT = "8080"

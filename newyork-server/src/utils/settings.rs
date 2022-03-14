@@ -7,7 +7,7 @@ pub struct HcmcConfig {
 pub fn get_hcmc_host(settings: HashMap<String, String>) -> Result<HcmcConfig> {
     let hcmc_ip = settings
         .get("HCMC_HOST")
-        .unwrap_or(&"localhost".to_string())
+        .unwrap_or(&"http://localhost".to_string())
         .to_owned();
 
     let hcmc_port = settings
