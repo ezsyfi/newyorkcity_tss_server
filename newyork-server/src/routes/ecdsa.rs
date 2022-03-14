@@ -19,7 +19,7 @@ use rocket::State;
 use rocket_contrib::json::Json;
 use uuid::Uuid;
 
-use super::super::auth::jwt::Claims;
+use super::super::auth::jwt::AuthPayload;
 use super::super::storage::db;
 use super::super::Config;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -81,7 +81,7 @@ impl db::MPCStruct for EcdsaStruct {
 #[post("/ecdsa/keygen/first", format = "json")]
 pub fn first_message(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
     let id = Uuid::new_v4().to_string();
 
@@ -89,16 +89,16 @@ pub fn first_message(
 
     //save pos 0
     db::insert(
-        &state.db,
-        &claim.sub,           // auth token
-        &id,                  // uuid
-        &EcdsaStruct::POS,    // Cryptography Ecliptic Curve
-        &HDPos { pos: 0u32 }, // HD wallet
+        &state.db, // current DB connection state
+        &auth_payload.user_id,
+        &id, // uuid to unify DB column key
+        &EcdsaStruct::POS,
+        &HDPos { pos: 0u32 }, // Initial HD position
     )?;
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::KeyGenFirstMsg,
         &key_gen_first_msg,
@@ -106,7 +106,7 @@ pub fn first_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::CommWitness,
         &comm_witness,
@@ -114,7 +114,7 @@ pub fn first_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::EcKeyPair,
         &ec_key_pair,
@@ -126,7 +126,7 @@ pub fn first_message(
 #[post("/ecdsa/keygen/<id>/second", format = "json", data = "<dlog_proof>")]
 pub fn second_message(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
     dlog_proof: Json<DLogProof<GE>>,
 ) -> Result<Json<party1::KeyGenParty1Message2>> {
@@ -134,26 +134,34 @@ pub fn second_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::Party2Public,
         &party2_public,
     )?;
 
-    let comm_witness: party_one::CommWitness =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CommWitness)?
-            .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
+    let comm_witness: party_one::CommWitness = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::CommWitness,
+    )?
+    .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
 
-    let ec_key_pair: party_one::EcKeyPair =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EcKeyPair)?
-            .ok_or_else(|| format_err!("No EcKeyPair for such identifier {}", id))?;
+    let ec_key_pair: party_one::EcKeyPair = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::EcKeyPair,
+    )?
+    .ok_or_else(|| format_err!("No EcKeyPair for such identifier {}", id))?;
 
     let (kg_party_one_second_message, paillier_key_pair, party_one_private) =
         MasterKey1::key_gen_second_message(comm_witness, &ec_key_pair, &dlog_proof.0);
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::PaillierKeyPair,
         &paillier_key_pair,
@@ -161,21 +169,11 @@ pub fn second_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::Party1Private,
         &party_one_private,
     )?;
-
-    // We have kg_party_one_second_message, paillier_key_pair, party_one_private in the second route
-    // println!("kg_party_one_second_message {:?}", kg_party_one_second_message);
-    // println!("paillier_key_pair {:?}", paillier_key_pair);
-
-    // let party_one_private_json = match serde_json::to_string(&party_one_private) {
-    //     Ok(share) => share,
-    //     Err(_) => panic!("Error while parsing party_one_private"),
-    // };
-    // println!("party_one_private {:?}", party_one_private_json);
 
     Ok(Json(kg_party_one_second_message))
 }
@@ -183,7 +181,7 @@ pub fn second_message(
 #[post("/ecdsa/keygen/<id>/chaincode/first", format = "json")]
 pub fn chain_code_first_message(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
 ) -> Result<Json<Party1FirstMessage>> {
     let (cc_party_one_first_message, cc_comm_witness, cc_ec_key_pair1) =
@@ -191,7 +189,7 @@ pub fn chain_code_first_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::CCKeyGenFirstMsg,
         &cc_party_one_first_message,
@@ -199,7 +197,7 @@ pub fn chain_code_first_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::CCCommWitness,
         &cc_comm_witness,
@@ -207,7 +205,7 @@ pub fn chain_code_first_message(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::CCEcKeyPair,
         &cc_ec_key_pair1,
@@ -223,14 +221,17 @@ pub fn chain_code_first_message(
 )]
 pub fn chain_code_second_message(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
     cc_party_two_first_message_d_log_proof: Json<DLogProof<GE>>,
 ) -> Result<Json<Party1SecondMessage<GE>>> {
-
-    let cc_comm_witness: CommWitness<GE> =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CCCommWitness)?
-            .ok_or_else(|| format_err!("No CCCommWitness for such identifier {}", id))?;
+    let cc_comm_witness: CommWitness<GE> = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::CCCommWitness,
+    )?
+    .ok_or_else(|| format_err!("No CCCommWitness for such identifier {}", id))?;
 
     let party1_cc = chain_code::party1::ChainCode1::chain_code_second_message(
         cc_comm_witness,
@@ -238,50 +239,77 @@ pub fn chain_code_second_message(
     );
 
     let party2_pub = &cc_party_two_first_message_d_log_proof.pk;
-    
-    chain_code_compute_message(state, claim, id, party2_pub)?;
+
+    chain_code_compute_message(state, auth_payload, id, party2_pub)?;
 
     Ok(Json(party1_cc))
 }
 
 pub fn chain_code_compute_message(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
     cc_party2_public: &GE,
 ) -> Result<Json<()>> {
-    let cc_ec_key_pair_party1: EcKeyPair<GE> =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CCEcKeyPair)?
-            .ok_or_else(|| format_err!("No CCEcKeyPair for such identifier {}", id))?;
+    let cc_ec_key_pair_party1: EcKeyPair<GE> = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::CCEcKeyPair,
+    )?
+    .ok_or_else(|| format_err!("No CCEcKeyPair for such identifier {}", id))?;
     let party1_cc = chain_code::party1::ChainCode1::compute_chain_code(
         &cc_ec_key_pair_party1,
         cc_party2_public,
     );
 
-    db::insert(&state.db, &claim.sub, &id, &EcdsaStruct::CC, &party1_cc)?;
-    master_key(state, claim, id)?;
+    db::insert(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::CC,
+        &party1_cc,
+    )?;
+    master_key(state, auth_payload, id)?;
     Ok(Json(()))
 }
 
-pub fn master_key(state: State<Config>, claim: Claims, id: String) -> Result<()> {
-    let party2_public: GE = db::get(&state.db, &claim.sub, &id, &EcdsaStruct::Party2Public)?
-        .ok_or_else(|| format_err!("No Party2Public for such identifier {}", id))?;
+pub fn master_key(state: State<Config>, auth_payload: AuthPayload, id: String) -> Result<()> {
+    let party2_public: GE = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::Party2Public,
+    )?
+    .ok_or_else(|| format_err!("No Party2Public for such identifier {}", id))?;
 
-    let paillier_key_pair: party_one::PaillierKeyPair =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::PaillierKeyPair)?
-            .ok_or_else(|| format_err!("No PaillierKeyPair for such identifier {}", id))?;
+    let paillier_key_pair: party_one::PaillierKeyPair = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::PaillierKeyPair,
+    )?
+    .ok_or_else(|| format_err!("No PaillierKeyPair for such identifier {}", id))?;
 
     let party1_cc: chain_code::party1::ChainCode1 =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CC)?
+        db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::CC)?
             .ok_or_else(|| format_err!("No CC for such identifier {}", id))?;
 
-    let party_one_private: party_one::Party1Private =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::Party1Private)?
-            .ok_or_else(|| format_err!("No Party1Private for such identifier {}", id))?;
+    let party_one_private: party_one::Party1Private = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::Party1Private,
+    )?
+    .ok_or_else(|| format_err!("No Party1Private for such identifier {}", id))?;
 
-    let comm_witness: party_one::CommWitness =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::CommWitness)?
-            .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
+    let comm_witness: party_one::CommWitness = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::CommWitness,
+    )?
+    .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
 
     let masterKey = MasterKey1::set_master_key(
         &party1_cc.chain_code,
@@ -293,7 +321,7 @@ pub fn master_key(state: State<Config>, claim: Claims, id: String) -> Result<()>
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::Party1MasterKey,
         &masterKey,
@@ -307,7 +335,7 @@ pub fn master_key(state: State<Config>, claim: Claims, id: String) -> Result<()>
 )]
 pub fn sign_first(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
     eph_key_gen_first_message_party_two: Json<party_two::EphKeyGenFirstMsg>,
 ) -> Result<Json<party_one::EphKeyGenFirstMsg>> {
@@ -315,7 +343,7 @@ pub fn sign_first(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::EphKeyGenFirstMsg,
         &eph_key_gen_first_message_party_two.0,
@@ -323,7 +351,7 @@ pub fn sign_first(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::EphEcKeyPair,
         &eph_ec_key_pair_party1,
@@ -343,26 +371,38 @@ pub struct SignSecondMsgRequest {
 #[post("/ecdsa/sign/<id>/second", format = "json", data = "<request>")]
 pub fn sign_second(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
     request: Json<SignSecondMsgRequest>,
 ) -> Result<Json<party_one::SignatureRecid>> {
-    let master_key: MasterKey1 =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::Party1MasterKey)?
-            .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))?;
+    let master_key: MasterKey1 = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::Party1MasterKey,
+    )?
+    .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))?;
 
     let x: BigInt = request.x_pos_child_key.clone();
     let y: BigInt = request.y_pos_child_key.clone();
 
     let child_master_key = master_key.get_child(vec![x, y]);
 
-    let eph_ec_key_pair_party1: party_one::EphEcKeyPair =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EphEcKeyPair)?
-            .ok_or_else(|| format_err!("No EphEcKeyPair for such identifier {}", id))?;
+    let eph_ec_key_pair_party1: party_one::EphEcKeyPair = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::EphEcKeyPair,
+    )?
+    .ok_or_else(|| format_err!("No EphEcKeyPair for such identifier {}", id))?;
 
-    let eph_key_gen_first_message_party_two: party_two::EphKeyGenFirstMsg =
-        db::get(&state.db, &claim.sub, &id, &EcdsaStruct::EphKeyGenFirstMsg)?
-            .ok_or_else(|| format_err!("No EphKeyGenFirstMsg for such identifier {}", id))?;
+    let eph_key_gen_first_message_party_two: party_two::EphKeyGenFirstMsg = db::get(
+        &state.db,
+        &auth_payload.user_id,
+        &id,
+        &EcdsaStruct::EphKeyGenFirstMsg,
+    )?
+    .ok_or_else(|| format_err!("No EphKeyGenFirstMsg for such identifier {}", id))?;
 
     let signature_with_recid = child_master_key.sign_second_message(
         &request.party_two_sign_message,
@@ -378,28 +418,33 @@ pub fn sign_second(
     Ok(Json(signature_with_recid.unwrap()))
 }
 
-pub fn get_mk(state: &State<Config>, claim: Claims, id: &String) -> Result<MasterKey1> {
-    db::get(&state.db, &claim.sub, id, &EcdsaStruct::Party1MasterKey)?
-        .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))
+pub fn get_mk(state: &State<Config>, auth_payload: AuthPayload, id: &String) -> Result<MasterKey1> {
+    db::get(
+        &state.db,
+        &auth_payload.user_id,
+        id,
+        &EcdsaStruct::Party1MasterKey,
+    )?
+    .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))
 }
 
 #[post("/ecdsa/rotate/<id>/first", format = "json")]
 pub fn rotate_first(
     state: State<Config>,
-    claim: Claims,
+    auth_payload: AuthPayload,
     id: String,
 ) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>> {
     let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::RotateCommitMessage1M,
         &m1,
     )?;
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::RotateCommitMessage1R,
         &r1,
@@ -415,7 +460,7 @@ pub fn rotate_first(
 pub fn rotate_second(
     state: State<Config>,
     id: String,
-    claim: Claims,
+    auth_payload: AuthPayload,
     party2_first_message: Json<coin_flip_optimal_rounds::Party2FirstMessage<GE>>,
 ) -> Result<
     Json<(
@@ -423,11 +468,11 @@ pub fn rotate_second(
         party1::RotationParty1Message1,
     )>,
 > {
-    let party_one_master_key = get_mk(&state, claim.clone(), &id)?;
+    let party_one_master_key = get_mk(&state, auth_payload.clone(), &id)?;
 
     let m1: Secp256k1Scalar = db::get(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::RotateCommitMessage1M,
     )?
@@ -435,7 +480,7 @@ pub fn rotate_second(
 
     let r1: Secp256k1Scalar = db::get(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::RotateCommitMessage1R,
     )?
@@ -445,7 +490,7 @@ pub fn rotate_second(
         Rotation1::key_rotate_second_message(&party2_first_message.0, &m1, &r1);
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::RotateRandom1,
         &random1,
@@ -456,7 +501,7 @@ pub fn rotate_second(
 
     db::insert(
         &state.db,
-        &claim.sub,
+        &auth_payload.user_id,
         &id,
         &EcdsaStruct::Party1MasterKey,
         &party_one_master_key_rotated,
@@ -469,8 +514,8 @@ pub fn rotate_second(
 }
 
 #[post("/ecdsa/<id>/recover", format = "json")]
-pub fn recover(state: State<Config>, claim: Claims, id: String) -> Result<Json<u32>> {
-    let pos_old: u32 = db::get(&state.db, &claim.sub, &id, &EcdsaStruct::POS)?
+pub fn recover(state: State<Config>, auth_payload: AuthPayload, id: String) -> Result<Json<u32>> {
+    let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| format_err!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
 }

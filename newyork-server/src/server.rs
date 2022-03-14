@@ -54,9 +54,7 @@ fn not_found(req: &Request) -> String {
 }
 
 pub fn get_server() -> Rocket {
-    let db_config = Config {
-        db: get_db(),
-    };
+    let db_config = Config { db: get_db() };
 
     rocket::ignite()
         .register(catchers![internal_error, not_found, bad_request])
