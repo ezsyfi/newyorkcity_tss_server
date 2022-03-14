@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::super::Result;
+use std::collections::HashMap;
 pub struct HcmcConfig {
     pub endpoint: String,
 }
@@ -16,6 +16,6 @@ pub fn get_hcmc_host(settings: HashMap<String, String>) -> Result<HcmcConfig> {
         .to_owned();
 
     Ok(HcmcConfig {
-        endpoint: format!("{}:{}", hcmc_ip, hcmc_port)
+        endpoint: format!("{}:{}", hcmc_ip, hcmc_port),
     })
 }

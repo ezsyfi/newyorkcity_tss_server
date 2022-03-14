@@ -58,10 +58,10 @@ fn not_found(req: &Request) -> String {
 pub fn get_server() -> Rocket {
     let settings = get_settings_as_map();
     let hcmc_config = get_hcmc_host(settings).unwrap();
-    let app_config = Config { 
+    let app_config = Config {
         db: get_db(),
         hcmc: hcmc_config,
-     };
+    };
 
     rocket::ignite()
         .register(catchers![internal_error, not_found, bad_request])

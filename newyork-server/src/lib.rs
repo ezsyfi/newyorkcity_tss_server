@@ -29,5 +29,5 @@ type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Config {
     pub db: storage::db::DB,
-    pub hcmc: utils::settings::HcmcConfig
+    pub hcmc: utils::settings::HcmcConfig,
 }

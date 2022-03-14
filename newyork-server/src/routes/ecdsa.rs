@@ -101,7 +101,10 @@ pub fn first_message(
         Err(e) => panic!("{}", e),
     };
     if !resp.status().is_success() {
-        panic!("Failed to validate user's token {:#?}", resp.text().unwrap());
+        panic!(
+            "Failed to validate user's token {:#?}",
+            resp.text().unwrap()
+        );
     }
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
 
@@ -276,7 +279,10 @@ pub fn chain_code_second_message(
         Err(e) => panic!("{}", e),
     };
     if !resp.status().is_success() {
-        panic!("Failed to store user's master key {:#?}", resp.text().unwrap());
+        panic!(
+            "Failed to store user's master key {:#?}",
+            resp.text().unwrap()
+        );
     }
     Ok(Json(party1_cc))
 }
