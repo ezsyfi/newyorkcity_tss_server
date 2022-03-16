@@ -1,7 +1,8 @@
-use config;
 use rocket;
 use rocket::{Request, Rocket};
 use rocksdb;
+
+use crate::utils::settings::get_hcmc_host;
 
 use super::routes::*;
 use super::storage::db;
@@ -56,10 +57,11 @@ fn not_found(req: &Request) -> String {
 
 pub fn get_server() -> Rocket {
     let settings = get_settings_as_map();
-    let db_config = Config {
-        db: get_db(settings.clone()),
+    let hcmc_config = get_hcmc_host(settings).unwrap();
+    let app_config = Config {
+        db: get_db(),
+        hcmc: hcmc_config,
     };
-    let auth_config = AuthConfig::load(settings.clone());
 
     rocket::ignite()
         .register(catchers![internal_error, not_found, bad_request])
@@ -85,8 +87,7 @@ pub fn get_server() -> Rocket {
                 // eddsa::sign_second,
             ],
         )
-        .manage(db_config)
-        .manage(auth_config)
+        .manage(app_config)
 }
 
 fn get_settings_as_map() -> HashMap<String, String> {
@@ -104,14 +105,13 @@ fn get_settings_as_map() -> HashMap<String, String> {
     settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
-fn get_db(settings: HashMap<String, String>) -> db::DB {
-    let db_type_string = settings
-        .get("db")
-        .unwrap_or(&"local".to_string())
-        .to_uppercase();
-    let db_type = db_type_string.as_str();
-
-    match db_type {
-        _ => db::DB::Local(rocksdb::DB::open_default("./db").unwrap()),
+fn get_db() -> db::DB {
+    print!("Init RocksDB connection");
+    match rocksdb::DB::open_default("./db") {
+        Ok(db) => db::DB::Local(db),
+        Err(e) => {
+            println!("Error: {}", e);
+            db::DB::ConnError("Failed to open rocksdb, please check your configuration".to_string())
+        }
     }
 }

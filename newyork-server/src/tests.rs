@@ -226,7 +226,7 @@ mod test_suites {
 
         let party_two_sign_message = child_party_two_master_key.sign_second_message(
             &eph_ec_key_pair_party2,
-            eph_comm_witness.clone(),
+            eph_comm_witness,
             &sign_party_one_first_message,
             &message,
         );
