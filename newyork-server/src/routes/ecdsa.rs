@@ -80,9 +80,9 @@ impl db::MPCStruct for EcdsaStruct {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct HcmcMasterKey {
-    pub master_key: String,
+#[derive(Serialize)]
+pub struct HcmcMasterKey<'a> {
+    pub master_key: &'a MasterKey1,
 }
 
 #[post("/ecdsa/keygen/first", format = "json")]
@@ -90,12 +90,13 @@ pub fn first_message(
     state: State<Config>,
     auth_payload: AuthPayload,
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
-    let id = Uuid::new_v4().to_string();
+    // Validate auth token first
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
     let check_token_res = get(&http_client, "/api/v1/storage/valid")
         .bearer_auth(&auth_payload.token)
         .send();
+
     let resp = match check_token_res {
         Ok(v) => v,
         Err(e) => panic!("{}", e),
@@ -106,6 +107,8 @@ pub fn first_message(
             resp.text().unwrap()
         );
     }
+
+    let id = Uuid::new_v4().to_string();
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
 
     //save pos 0
@@ -262,19 +265,17 @@ pub fn chain_code_second_message(
     let party2_pub = &cc_party_two_first_message_d_log_proof.pk;
 
     let master_key = chain_code_compute_message(&state, &auth_payload, id, party2_pub)?;
-    let master_key_json = match serde_json::to_string(&master_key) {
-        Ok(mk) => mk,
-        Err(_) => panic!("Error while parsing master key to json"),
-    };
+
+    // Send mk#2 to HCMC
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
-    let check_token_res = post(&http_client, "/api/v1/storage/secret")
+    let update_mk_res = post(&http_client, "/api/v1/storage/secret")
         .bearer_auth(&auth_payload.token)
         .json(&HcmcMasterKey {
-            master_key: master_key_json,
+            master_key: &master_key,
         })
         .send();
-    let resp = match check_token_res {
+    let resp = match update_mk_res {
         Ok(v) => v,
         Err(e) => panic!("{}", e),
     };
