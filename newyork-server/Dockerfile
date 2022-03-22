@@ -14,7 +14,7 @@ FROM ubuntu:latest
 WORKDIR /app
 
 # Install <extra-runtime-dependencies>
-RUN apt-get update && apt-get install -y libclang-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libclang-dev && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
 
 # Copy bin & config files
 COPY --from=builder /app/target/release .
