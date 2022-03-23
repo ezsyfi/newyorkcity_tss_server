@@ -15,9 +15,9 @@ impl HttpClient {
 }
 
 pub fn get(client: &HttpClient, path: &str) -> RequestBuilder {
-    client.c.get(client.base_url.to_owned() + path)
+    client.c.get(format!("{}{}", client.base_url, path))
 }
 
 pub fn post(client: &HttpClient, path: &str) -> RequestBuilder {
-    client.c.post(client.base_url.to_owned() + path)
+    client.c.post(format!("{}{}", client.base_url, path))
 }
