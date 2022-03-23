@@ -90,24 +90,7 @@ pub fn first_message(
     state: State<Config>,
     auth_payload: AuthPayload,
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
-    // Validate auth token first
-    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
-
-    let check_token_res = get(&http_client, "/api/v1/storage/valid")
-        .bearer_auth(&auth_payload.token)
-        .send();
-
-    let resp = match check_token_res {
-        Ok(v) => v,
-        Err(e) => panic!("{}", e),
-    };
-    if !resp.status().is_success() {
-        panic!(
-            "Failed to validate user's token {:#?}",
-            resp.text().unwrap()
-        );
-    }
-
+    validate_auth_token(&state, &auth_payload);
     let id = Uuid::new_v4().to_string();
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
 
@@ -387,6 +370,7 @@ pub fn sign_first(
     id: String,
     eph_key_gen_first_message_party_two: Json<party_two::EphKeyGenFirstMsg>,
 ) -> Result<Json<party_one::EphKeyGenFirstMsg>> {
+    validate_auth_token(&state, &auth_payload);
     let (sign_party_one_first_message, eph_ec_key_pair_party1) = MasterKey1::sign_first_message();
 
     db::insert(
@@ -566,4 +550,23 @@ pub fn recover(state: State<Config>, auth_payload: AuthPayload, id: String) -> R
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| format_err!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
+}
+
+fn validate_auth_token(state: &State<Config>, auth_payload: &AuthPayload) {
+    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
+
+    let check_token_res = get(&http_client, "/api/v1/storage/valid")
+        .bearer_auth(&auth_payload.token)
+        .send();
+
+    let resp = match check_token_res {
+        Ok(v) => v,
+        Err(e) => panic!("{}", e),
+    };
+    if !resp.status().is_success() {
+        panic!(
+            "Failed to validate user's token {:#?}",
+            resp.text().unwrap()
+        );
+    }
 }
