@@ -20,15 +20,8 @@ jobs:
           - nightly
     steps:
       - uses: actions/checkout@v3
-      - run: cd ./newyork-server
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: rustup component add rustfmt
-      
-      - name: Lint
-        run: cargo fmt
-
-      - name: Test
-        run: cargo test --verbose
 
       - name: Docker Login
         env:
@@ -36,11 +29,14 @@ jobs:
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
         run:
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-      
-      - name: Docker Build
+
+      - name: CI
         env:
           IMAGE_NAME: newyork_city
-        run: |
-           docker build -t $IMAGE_NAME .
-           docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
-           docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+        run: | 
+          cd ./newyork-server
+          cargo fmt
+          cargo test --verbose
+          docker build -t $IMAGE_NAME .
+          docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
+          docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
