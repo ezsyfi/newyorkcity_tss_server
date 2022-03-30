@@ -342,7 +342,8 @@ mod test_suites {
             id,
             master_key_2,
             message,
-            auth_header.clone(), user_id_header.clone()
+            auth_header.clone(),
+            user_id_header.clone(),
         );
 
         println!(

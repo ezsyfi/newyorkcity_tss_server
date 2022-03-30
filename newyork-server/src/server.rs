@@ -61,7 +61,6 @@ pub fn get_server() -> Rocket {
 }
 
 pub fn get_settings_as_map(file_path: &str) -> HashMap<String, String> {
- 
     let settings = config::Config::builder()
         .add_source(config::File::with_name(file_path))
         .build()
@@ -73,12 +72,11 @@ pub fn get_settings_as_map(file_path: &str) -> HashMap<String, String> {
 }
 
 fn get_db() -> db::DB {
-    
     match rocksdb::DB::open_default("./db") {
         Ok(db) => {
             print!("Init RocksDB connection successfully");
             db::DB::Local(db)
-        },
+        }
         Err(e) => {
             error!("{:#?}", e);
             db::DB::ConnError(
