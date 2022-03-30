@@ -111,7 +111,9 @@ fn get_db() -> db::DB {
         Ok(db) => db::DB::Local(db),
         Err(e) => {
             println!("Error: {}", e);
-            db::DB::ConnError("Failed to connect RocksDB, please check your configuration".to_string())
+            db::DB::ConnError(
+                "Failed to connect RocksDB, please check your configuration".to_string(),
+            )
         }
     }
 }

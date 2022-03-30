@@ -5,7 +5,6 @@ use std::fmt::Debug;
 use crate::utils::requests::{get, post, HttpClient};
 
 use anyhow::{anyhow, Result};
-// use super::super::Result;
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
 use curv::cryptographic_primitives::twoparty::coin_flip_optimal_rounds;
 use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::{
@@ -91,7 +90,7 @@ pub fn first_message(
     state: State<Config>,
     auth_payload: AuthPayload,
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
-    validate_auth_token(&state, &auth_payload);
+    validate_auth_token(&state, &auth_payload)?;
     let id = Uuid::new_v4().to_string();
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
 
@@ -369,7 +368,7 @@ pub fn sign_first(
     id: String,
     eph_key_gen_first_message_party_two: Json<party_two::EphKeyGenFirstMsg>,
 ) -> Result<Json<party_one::EphKeyGenFirstMsg>> {
-    validate_auth_token(&state, &auth_payload);
+    validate_auth_token(&state, &auth_payload)?;
     let (sign_party_one_first_message, eph_ec_key_pair_party1) = MasterKey1::sign_first_message();
 
     db::insert(
