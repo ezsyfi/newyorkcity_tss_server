@@ -5,9 +5,6 @@
 extern crate rocket;
 
 #[macro_use]
-extern crate failure;
-
-#[macro_use]
 extern crate serde_derive;
 
 #[macro_use]
@@ -24,8 +21,6 @@ pub mod server;
 pub mod storage;
 pub mod tests;
 pub mod utils;
-
-type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Config {
     pub db: storage::db::DB,

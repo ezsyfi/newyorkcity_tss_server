@@ -110,8 +110,10 @@ fn get_db() -> db::DB {
     match rocksdb::DB::open_default("./db") {
         Ok(db) => db::DB::Local(db),
         Err(e) => {
-            println!("Error: {}", e);
-            db::DB::ConnError("Failed to open rocksdb, please check your configuration".to_string())
+            error!("{:#?}", e);
+            db::DB::ConnError(
+                "Failed to connect RocksDB, please check your configuration".to_string(),
+            )
         }
     }
 }

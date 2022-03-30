@@ -27,7 +27,6 @@ log = "0.4"
 config = "0.11.0"
 uuid = { version = "0.8.2", features = ["v4"] }
 error-chain = "0.12.0"
-failure = "0.1.5"
 jsonwebtoken = "8.0.1"
 rust-crypto = "0.2"
 hex = "0.4.3"
@@ -35,6 +34,7 @@ floating-duration = "0.1.2"
 curv = { package = "curv-kzen", version = "0.7.0" }
 reqwest = { version = "0.11", features = ["blocking", "json"] }
 tokio = { version = "1", features = ["full"] }
+anyhow = "1.0.56"
 
 [dependencies.zk-paillier]
 git = "https://github.com/KZen-networks/zk-paillier"

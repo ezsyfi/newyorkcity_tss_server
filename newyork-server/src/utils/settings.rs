@@ -1,5 +1,6 @@
-use super::super::Result;
 use std::collections::HashMap;
+
+use anyhow::Result;
 pub struct HcmcConfig {
     pub endpoint: String,
 }

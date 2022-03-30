@@ -30,7 +30,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for AuthPayload {
         let token = header_parts.next().unwrap_or("");
         let user_id: &str = request.headers().get_one("user_id").unwrap_or("");
 
-        println!("Auth token and user id {} {}", token, user_id);
+        debug!("Auth token - user id: {} - {}", token, user_id);
 
         if token.is_empty() || user_id.is_empty() {
             return Outcome::Failure((Status::Unauthorized, ()));
