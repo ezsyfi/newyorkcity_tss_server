@@ -96,12 +96,17 @@ pub fn first_message(
 
     //save pos 0
     db::insert(
-        &state.db, // current DB connection state
-        &auth_payload.user_id,
-        &id, // uuid to unify DB column key
+        &state.db,             // current DB connection state
+        &auth_payload.user_id, // user id in supabase
+        &id,                   // uuid to unify DB column key
         &EcdsaStruct::POS,
         &HDPos { pos: 0u32 }, // Initial HD position
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::POS,
+        &auth_payload.user_id
+    );
 
     db::insert(
         &state.db,
@@ -110,6 +115,11 @@ pub fn first_message(
         &EcdsaStruct::KeyGenFirstMsg,
         &key_gen_first_msg,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::KeyGenFirstMsg,
+        &auth_payload.user_id
+    );
 
     db::insert(
         &state.db,
@@ -118,6 +128,11 @@ pub fn first_message(
         &EcdsaStruct::CommWitness,
         &comm_witness,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::CommWitness,
+        &auth_payload.user_id
+    );
 
     db::insert(
         &state.db,
@@ -126,6 +141,11 @@ pub fn first_message(
         &EcdsaStruct::EcKeyPair,
         &ec_key_pair,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::EcKeyPair,
+        &auth_payload.user_id
+    );
 
     Ok(Json((id, key_gen_first_msg)))
 }
@@ -146,6 +166,11 @@ pub fn second_message(
         &EcdsaStruct::Party2Public,
         &party2_public,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::Party2Public,
+        &auth_payload.user_id
+    );
 
     let comm_witness: party_one::CommWitness = db::get(
         &state.db,
@@ -173,6 +198,11 @@ pub fn second_message(
         &EcdsaStruct::PaillierKeyPair,
         &paillier_key_pair,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::PaillierKeyPair,
+        &auth_payload.user_id
+    );
 
     db::insert(
         &state.db,
@@ -181,6 +211,11 @@ pub fn second_message(
         &EcdsaStruct::Party1Private,
         &party_one_private,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::Party1Private,
+        &auth_payload.user_id
+    );
 
     Ok(Json(kg_party_one_second_message))
 }
@@ -201,6 +236,11 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCKeyGenFirstMsg,
         &cc_party_one_first_message,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::CCKeyGenFirstMsg,
+        &auth_payload.user_id
+    );
 
     db::insert(
         &state.db,
@@ -209,6 +249,11 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCCommWitness,
         &cc_comm_witness,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::CCCommWitness,
+        &auth_payload.user_id
+    );
 
     db::insert(
         &state.db,
@@ -217,6 +262,11 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCEcKeyPair,
         &cc_ec_key_pair1,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::CCEcKeyPair,
+        &auth_payload.user_id
+    );
 
     Ok(Json(cc_party_one_first_message))
 }
@@ -294,6 +344,12 @@ pub fn chain_code_compute_message(
         &EcdsaStruct::CC,
         &party1_cc,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::CC,
+        &auth_payload.user_id
+    );
+
     master_key(state, auth_payload, id)
 }
 
@@ -353,6 +409,11 @@ pub fn master_key(
         &EcdsaStruct::Party1MasterKey,
         &masterKey,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::Party1MasterKey,
+        &auth_payload.user_id
+    );
 
     Ok(masterKey)
 }
@@ -378,7 +439,11 @@ pub fn sign_first(
         &EcdsaStruct::EphKeyGenFirstMsg,
         &eph_key_gen_first_message_party_two.0,
     )?;
-
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::EphKeyGenFirstMsg,
+        &auth_payload.user_id
+    );
     db::insert(
         &state.db,
         &auth_payload.user_id,
@@ -386,7 +451,11 @@ pub fn sign_first(
         &EcdsaStruct::EphEcKeyPair,
         &eph_ec_key_pair_party1,
     )?;
-
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::EphEcKeyPair,
+        &auth_payload.user_id
+    );
     Ok(Json(sign_party_one_first_message))
 }
 
@@ -472,6 +541,13 @@ pub fn rotate_first(
         &EcdsaStruct::RotateCommitMessage1M,
         &m1,
     )?;
+
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::RotateCommitMessage1M,
+        &auth_payload.user_id
+    );
+
     db::insert(
         &state.db,
         &auth_payload.user_id,
@@ -479,6 +555,13 @@ pub fn rotate_first(
         &EcdsaStruct::RotateCommitMessage1R,
         &r1,
     )?;
+
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::RotateCommitMessage1R,
+        &auth_payload.user_id
+    );
+
     Ok(Json(party1_coin_flip_first_message))
 }
 
@@ -525,6 +608,11 @@ pub fn rotate_second(
         &EcdsaStruct::RotateRandom1,
         &random1,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::RotateRandom1,
+        &auth_payload.user_id
+    );
 
     let (rotation_party_one_first_message, party_one_master_key_rotated) =
         party_one_master_key.rotation_first_message(&random1);
@@ -536,6 +624,11 @@ pub fn rotate_second(
         &EcdsaStruct::Party1MasterKey,
         &party_one_master_key_rotated,
     )?;
+    info!(
+        "Insert {:#?} of identifier {}",
+        &EcdsaStruct::Party1MasterKey,
+        &auth_payload.user_id
+    );
 
     Ok(Json((
         party1_second_message,
