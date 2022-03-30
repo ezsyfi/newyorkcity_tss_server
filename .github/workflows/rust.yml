@@ -36,12 +36,14 @@ jobs:
         run: |
           cd ./newyork-server
           touch env.staging.toml
-          echo HCMC_HOST=${{secrets.HCMC_HOST}} >> env.staging.toml
-          echo HCMC_PORT=${{secrets.HCMC_PORT}} >> env.staging.toml
+          echo HCMC_HOST="${{secrets.HCMC_HOST}}" >> env.staging.toml
+          echo HCMC_PORT="${{secrets.HCMC_PORT}}" >> env.staging.toml
+          cat env.staging.toml
           touch env.test.toml
-          echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> env.test.toml
-          echo TEST_PASS=${{secrets.TEST_PASS}} >> env.test.toml
-          echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> env.test.toml
+          echo TEST_EMAIL="${{secrets.TEST_EMAIL}}" >> env.test.toml
+          echo TEST_PASS="${{secrets.TEST_PASS}}" >> env.test.toml
+          echo TEST_SIGNIN_URL="${{secrets.TEST_SIGNIN_URL}}" >> env.test.toml
+          cat env.test.toml
           cargo fmt
           cargo test --verbose
           docker build -t $IMAGE_NAME .
