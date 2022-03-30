@@ -4,7 +4,7 @@
 
 // use super::super::auth::jwt::Claims;
 // use super::super::storage::db;
-// use super::super::Config;
+// use super::super::AppConfig;
 
 // use self::SchnorrStruct::*;
 // use multi_party_schnorr::protocols::thresholdsig::zilliqa_schnorr::*;

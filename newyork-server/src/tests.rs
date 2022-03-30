@@ -9,7 +9,6 @@ mod test_suites {
     use rocket::http::Status;
     use rocket::local::Client;
     use serde_json;
-    use std::env;
     use std::time::Instant;
     use zk_paillier::zkproofs::SALT_STRING;
 
@@ -27,7 +26,8 @@ mod test_suites {
 
         /*************** START: FIRST MESSAGE ***************/
         let start = Instant::now();
-
+        let httpClient = reqwest::blocking::Client::new();
+        httpClient.post("");
         let mut response = client
             .post("/ecdsa/keygen/first")
             .header(ContentType::JSON)
@@ -268,10 +268,6 @@ mod test_suites {
     #[test]
     fn key_gen_and_sign() {
         // Passthrough mode
-        env::set_var("region", "");
-        env::set_var("pool_id", "");
-        env::set_var("issuer", "");
-        env::set_var("audience", "");
 
         time_test!();
 
@@ -293,11 +289,6 @@ mod test_suites {
 
     #[test]
     fn authentication_test_invalid_token() {
-        env::set_var("region", "region");
-        env::set_var("pool_id", "pool_id");
-        env::set_var("issuer", "issuer");
-        env::set_var("audience", "audience");
-
         let client = Client::new(server::get_server()).expect("valid rocket instance");
 
         let auth_header = Header::new("Authorization", "Bearer a");
@@ -312,11 +303,6 @@ mod test_suites {
 
     #[test]
     fn authentication_test_expired_token() {
-        env::set_var("region", "region");
-        env::set_var("pool_id", "pool_id");
-        env::set_var("issuer", "issuer");
-        env::set_var("audience", "audience");
-
         let client = Client::new(server::get_server()).expect("valid rocket instance");
 
         let token: String = "Bearer eyJraWQiOiJZeEdoUlhsTytZSWpjU2xWZFdVUFA1dHhWd\

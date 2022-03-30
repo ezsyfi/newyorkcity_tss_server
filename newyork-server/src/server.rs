@@ -6,39 +6,9 @@ use crate::utils::settings::get_hcmc_host;
 
 use super::routes::*;
 use super::storage::db;
-use super::Config;
+use super::AppConfig;
 
 use std::collections::HashMap;
-
-#[derive(Deserialize)]
-pub struct AuthConfig {
-    pub issuer: String,
-    pub audience: String,
-    pub region: String,
-    pub pool_id: String,
-}
-
-impl AuthConfig {
-    pub fn load(settings: HashMap<String, String>) -> AuthConfig {
-        let issuer = settings.get("issuer").unwrap_or(&"".to_string()).to_owned();
-        let audience = settings
-            .get("audience")
-            .unwrap_or(&"".to_string())
-            .to_owned();
-        let region = settings.get("region").unwrap_or(&"".to_string()).to_owned();
-        let pool_id = settings
-            .get("pool_id")
-            .unwrap_or(&"".to_string())
-            .to_owned();
-
-        AuthConfig {
-            issuer,
-            audience,
-            region,
-            pool_id,
-        }
-    }
-}
 
 #[catch(500)]
 fn internal_error() -> &'static str {
@@ -56,9 +26,9 @@ fn not_found(req: &Request) -> String {
 }
 
 pub fn get_server() -> Rocket {
-    let settings = get_settings_as_map();
+    let settings = get_settings_as_map("env.local.toml");
     let hcmc_config = get_hcmc_host(settings).unwrap();
-    let app_config = Config {
+    let app_config = AppConfig {
         db: get_db(),
         hcmc: hcmc_config,
     };
@@ -90,19 +60,16 @@ pub fn get_server() -> Rocket {
         .manage(app_config)
 }
 
-fn get_settings_as_map() -> HashMap<String, String> {
-    let config_file = include_str!("../env.local.toml");
-    let mut settings = config::Config::default();
-    settings
-        .merge(config::File::from_str(
-            config_file,
-            config::FileFormat::Toml,
-        ))
-        .unwrap()
-        .merge(config::Environment::new())
+pub fn get_settings_as_map(file_path: &str) -> HashMap<String, String> {
+ 
+    let settings = config::Config::builder()
+        .add_source(config::File::with_name(file_path))
+        .build()
         .unwrap();
 
-    settings.try_into::<HashMap<String, String>>().unwrap()
+    settings
+        .try_deserialize::<HashMap<String, String>>()
+        .unwrap()
 }
 
 fn get_db() -> db::DB {
