@@ -26,7 +26,7 @@ fn not_found(req: &Request) -> String {
 }
 
 pub fn get_server() -> Rocket {
-    let settings = get_settings_as_map("env.local.toml");
+    let settings = get_settings_as_map("env.staging.toml");
     let hcmc_config = get_hcmc_host(settings).unwrap();
     let app_config = AppConfig {
         db: get_db(),
@@ -73,9 +73,12 @@ pub fn get_settings_as_map(file_path: &str) -> HashMap<String, String> {
 }
 
 fn get_db() -> db::DB {
-    print!("Init RocksDB connection");
+    
     match rocksdb::DB::open_default("./db") {
-        Ok(db) => db::DB::Local(db),
+        Ok(db) => {
+            print!("Init RocksDB connection successfully");
+            db::DB::Local(db)
+        },
         Err(e) => {
             error!("{:#?}", e);
             db::DB::ConnError(

@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test_suites {
 
+    use crate::server::get_settings_as_map;
+
     use super::super::routes::ecdsa;
     use super::super::server;
     use rocket;
@@ -9,6 +11,7 @@ mod test_suites {
     use rocket::http::Status;
     use rocket::local::Client;
     use serde_json;
+    use serde_json::json;
     use std::time::Instant;
     use zk_paillier::zkproofs::SALT_STRING;
 
@@ -21,16 +24,28 @@ mod test_suites {
     use kms::ecdsa::two_party::*;
     use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
 
-    fn key_gen(client: &Client) -> (String, MasterKey2) {
+    #[derive(Debug, Deserialize)]
+    #[warn(dead_code, non_snake_case)]
+    struct AuthToken {
+        StatusCode: u16,
+        Msg: String,
+    }
+
+    fn key_gen(
+        client: &Client,
+        auth_header: Header<'static>,
+        user_id_header: Header<'static>,
+    ) -> (String, MasterKey2) {
         time_test!();
 
         /*************** START: FIRST MESSAGE ***************/
         let start = Instant::now();
-        let httpClient = reqwest::blocking::Client::new();
-        httpClient.post("");
+
         let mut response = client
             .post("/ecdsa/keygen/first")
             .header(ContentType::JSON)
+            .header(auth_header.clone())
+            .header(user_id_header.clone())
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
@@ -63,6 +78,8 @@ mod test_suites {
             .post(format!("/ecdsa/keygen/{}/second", id))
             .body(body)
             .header(ContentType::JSON)
+            .header(auth_header.clone())
+            .header(user_id_header.clone())
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
@@ -99,6 +116,8 @@ mod test_suites {
         let mut response = client
             .post(format!("/ecdsa/keygen/{}/chaincode/first", id))
             .header(ContentType::JSON)
+            .header(auth_header.clone())
+            .header(user_id_header.clone())
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
@@ -130,6 +149,8 @@ mod test_suites {
             .post(format!("/ecdsa/keygen/{}/chaincode/second", id))
             .body(body)
             .header(ContentType::JSON)
+            .header(auth_header.clone())
+            .header(user_id_header.clone())
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
@@ -190,6 +211,8 @@ mod test_suites {
         id: String,
         master_key_2: MasterKey2,
         message: BigInt,
+        auth_header: Header<'static>,
+        user_id_header: Header<'static>,
     ) -> party_one::SignatureRecid {
         time_test!();
         let (eph_key_gen_first_message_party_two, eph_comm_witness, eph_ec_key_pair_party2) =
@@ -205,6 +228,8 @@ mod test_suites {
             .post(format!("/ecdsa/sign/{}/first", id))
             .body(body)
             .header(ContentType::JSON)
+            .header(auth_header.clone())
+            .header(user_id_header.clone())
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
@@ -251,6 +276,8 @@ mod test_suites {
             .post(format!("/ecdsa/sign/{}/second", id))
             .body(body)
             .header(ContentType::JSON)
+            .header(auth_header.clone())
+            .header(user_id_header.clone())
             .dispatch();
         assert_eq!(response.status(), Status::Ok);
 
@@ -267,17 +294,56 @@ mod test_suites {
 
     #[test]
     fn key_gen_and_sign() {
-        // Passthrough mode
+        let settings = get_settings_as_map("env.test.toml");
+
+        let signin_url = settings
+            .get("TEST_SIGNIN_URL")
+            .unwrap_or(&"http://localhost".to_string())
+            .to_owned();
+
+        let test_email = settings
+            .get("TEST_EMAIL")
+            .unwrap_or(&"TEST_EMAIL".to_string())
+            .to_owned();
+
+        let test_pass = settings
+            .get("TEST_PASS")
+            .unwrap_or(&"TEST_PASSt".to_string())
+            .to_owned();
 
         time_test!();
 
+        let http_client = reqwest::blocking::Client::new();
+        let auth_body = json!({
+            "email": test_email,
+            "password": test_pass
+        });
+        let http_resp = http_client
+            .post(signin_url)
+            .json(&auth_body)
+            .send()
+            .unwrap()
+            .json::<AuthToken>()
+            .unwrap();
+
+        println!("{:#?}", http_resp);
+        let auth_header = Header::new("Authorization", format!("Bearer {}", http_resp.Msg));
+        let user_id_header = Header::new("user_id", test_email);
+
         let client = Client::new(server::get_server()).expect("valid rocket instance");
 
-        let (id, master_key_2): (String, MasterKey2) = key_gen(&client);
+        let (id, master_key_2): (String, MasterKey2) =
+            key_gen(&client, auth_header.clone(), user_id_header.clone());
 
         let message = BigInt::from(1234);
 
-        let signature: party_one::SignatureRecid = sign(&client, id, master_key_2, message);
+        let signature: party_one::SignatureRecid = sign(
+            &client,
+            id,
+            master_key_2,
+            message,
+            auth_header.clone(), user_id_header.clone()
+        );
 
         println!(
             "s = (r: {}, s: {}, recid: {})",
