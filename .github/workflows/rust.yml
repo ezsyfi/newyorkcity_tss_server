@@ -20,9 +20,13 @@ jobs:
           - nightly
     steps:
       - uses: actions/checkout@v3
+      - run: cd ./newyork-server
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
       - name: Lint
         run: cargo fmt
-      - name: Run tests
+
+      - name: Test
         run: cargo test --verbose
 
       - name: Docker Login
