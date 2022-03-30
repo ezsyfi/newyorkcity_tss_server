@@ -1,0 +1,41 @@
+name: Cargo Build & Test
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+    branches: [dev]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+    steps:
+      - uses: actions/checkout@v3
+      - name: Lint
+        run: cargo fmt
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Docker Login
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+        run:
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      
+      - name: Docker Build
+        env:
+          IMAGE_NAME: newyork_city
+        run: |
+           docker build -t $IMAGE_NAME .
+           docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
+           docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
