@@ -1,4 +1,4 @@
-use super::super::Result;
+use anyhow::{anyhow, Result};
 use rocksdb;
 use serde;
 
@@ -26,12 +26,12 @@ where
     match db {
         DB::Local(rocksdb_client) => {
             let identifier = idify(user_id, id, name);
-            let v_string = serde_json::to_string(&v).unwrap();
+            let v_string = serde_json::to_string(&v)?;
             rocksdb_client.put(identifier.as_bytes(), v_string.as_bytes())?;
             Ok(())
         }
         DB::ConnError(msg) => {
-            panic!("{}", msg);
+            return Err(anyhow!("{}", msg));
         }
     }
 }
@@ -48,12 +48,12 @@ where
             let db_option = rocksdb_client.get(identifier.as_bytes())?;
             let vec_option: Option<Vec<u8>> = db_option.map(|v| v.to_vec());
             match vec_option {
-                Some(vec) => Ok(serde_json::from_slice(&vec).unwrap()),
+                Some(vec) => Ok(serde_json::from_slice(&vec)?),
                 None => Ok(None),
             }
         }
         DB::ConnError(msg) => {
-            panic!("{}", msg);
+            return Err(anyhow!("{}", msg));
         }
     }
 }

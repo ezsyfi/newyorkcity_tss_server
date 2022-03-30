@@ -4,7 +4,8 @@ use std::fmt::Debug;
 
 use crate::utils::requests::{get, post, HttpClient};
 
-use super::super::Result;
+use anyhow::{anyhow, Result};
+// use super::super::Result;
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
 use curv::cryptographic_primitives::twoparty::coin_flip_optimal_rounds;
 use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::{
@@ -153,7 +154,7 @@ pub fn second_message(
         &id,
         &EcdsaStruct::CommWitness,
     )?
-    .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No CommWitness for such identifier {}", id))?;
 
     let ec_key_pair: party_one::EcKeyPair = db::get(
         &state.db,
@@ -161,7 +162,7 @@ pub fn second_message(
         &id,
         &EcdsaStruct::EcKeyPair,
     )?
-    .ok_or_else(|| format_err!("No EcKeyPair for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No EcKeyPair for such identifier {}", id))?;
 
     let (kg_party_one_second_message, paillier_key_pair, party_one_private) =
         MasterKey1::key_gen_second_message(comm_witness, &ec_key_pair, &dlog_proof.0);
@@ -238,7 +239,7 @@ pub fn chain_code_second_message(
         &id,
         &EcdsaStruct::CCCommWitness,
     )?
-    .ok_or_else(|| format_err!("No CCCommWitness for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No CCCommWitness for such identifier {}", id))?;
 
     let party1_cc = chain_code::party1::ChainCode1::chain_code_second_message(
         cc_comm_witness,
@@ -252,22 +253,20 @@ pub fn chain_code_second_message(
     // Send mk#2 to HCMC
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
-    let update_mk_res = post(&http_client, "/api/v1/storage/secret")
+    let update_mk_resp = post(&http_client, "/api/v1/storage/secret")
         .bearer_auth(&auth_payload.token)
         .json(&HcmcMasterKey {
             master_key: &master_key,
         })
-        .send();
-    let resp = match update_mk_res {
-        Ok(v) => v,
-        Err(e) => panic!("{}", e),
-    };
-    if !resp.status().is_success() {
-        panic!(
+        .send()?;
+
+    if !update_mk_resp.status().is_success() {
+        return Err(anyhow!(
             "Failed to store user's master key {:#?}",
-            resp.text().unwrap()
-        );
+            update_mk_resp.text()?
+        ));
     }
+
     Ok(Json(party1_cc))
 }
 
@@ -283,7 +282,7 @@ pub fn chain_code_compute_message(
         &id,
         &EcdsaStruct::CCEcKeyPair,
     )?
-    .ok_or_else(|| format_err!("No CCEcKeyPair for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No CCEcKeyPair for such identifier {}", id))?;
     let party1_cc = chain_code::party1::ChainCode1::compute_chain_code(
         &cc_ec_key_pair_party1,
         cc_party2_public,
@@ -310,7 +309,7 @@ pub fn master_key(
         &id,
         &EcdsaStruct::Party2Public,
     )?
-    .ok_or_else(|| format_err!("No Party2Public for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No Party2Public for such identifier {}", id))?;
 
     let paillier_key_pair: party_one::PaillierKeyPair = db::get(
         &state.db,
@@ -318,11 +317,11 @@ pub fn master_key(
         &id,
         &EcdsaStruct::PaillierKeyPair,
     )?
-    .ok_or_else(|| format_err!("No PaillierKeyPair for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No PaillierKeyPair for such identifier {}", id))?;
 
     let party1_cc: chain_code::party1::ChainCode1 =
         db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::CC)?
-            .ok_or_else(|| format_err!("No CC for such identifier {}", id))?;
+            .ok_or_else(|| anyhow!("No CC for such identifier {}", id))?;
 
     let party_one_private: party_one::Party1Private = db::get(
         &state.db,
@@ -330,7 +329,7 @@ pub fn master_key(
         &id,
         &EcdsaStruct::Party1Private,
     )?
-    .ok_or_else(|| format_err!("No Party1Private for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No Party1Private for such identifier {}", id))?;
 
     let comm_witness: party_one::CommWitness = db::get(
         &state.db,
@@ -338,7 +337,7 @@ pub fn master_key(
         &id,
         &EcdsaStruct::CommWitness,
     )?
-    .ok_or_else(|| format_err!("No CommWitness for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No CommWitness for such identifier {}", id))?;
 
     let masterKey = MasterKey1::set_master_key(
         &party1_cc.chain_code,
@@ -413,7 +412,7 @@ pub fn sign_second(
         &id,
         &EcdsaStruct::Party1MasterKey,
     )?
-    .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No Party1MasterKey for such identifier {}", id))?;
 
     let x: BigInt = request.x_pos_child_key.clone();
     let y: BigInt = request.y_pos_child_key.clone();
@@ -426,7 +425,7 @@ pub fn sign_second(
         &id,
         &EcdsaStruct::EphEcKeyPair,
     )?
-    .ok_or_else(|| format_err!("No EphEcKeyPair for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No EphEcKeyPair for such identifier {}", id))?;
 
     let eph_key_gen_first_message_party_two: party_two::EphKeyGenFirstMsg = db::get(
         &state.db,
@@ -434,7 +433,7 @@ pub fn sign_second(
         &id,
         &EcdsaStruct::EphKeyGenFirstMsg,
     )?
-    .ok_or_else(|| format_err!("No EphKeyGenFirstMsg for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No EphKeyGenFirstMsg for such identifier {}", id))?;
 
     let signature_with_recid = child_master_key.sign_second_message(
         &request.party_two_sign_message,
@@ -457,7 +456,7 @@ pub fn get_mk(state: &State<Config>, auth_payload: AuthPayload, id: &String) -> 
         id,
         &EcdsaStruct::Party1MasterKey,
     )?
-    .ok_or_else(|| format_err!("No Party1MasterKey for such identifier {}", id))
+    .ok_or_else(|| anyhow!("No Party1MasterKey for such identifier {}", id))
 }
 
 #[post("/ecdsa/rotate/<id>/first", format = "json")]
@@ -508,7 +507,7 @@ pub fn rotate_second(
         &id,
         &EcdsaStruct::RotateCommitMessage1M,
     )?
-    .ok_or_else(|| format_err!("No RotateCommitMessage1M for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No RotateCommitMessage1M for such identifier {}", id))?;
 
     let r1: Secp256k1Scalar = db::get(
         &state.db,
@@ -516,7 +515,7 @@ pub fn rotate_second(
         &id,
         &EcdsaStruct::RotateCommitMessage1R,
     )?
-    .ok_or_else(|| format_err!("No RotateCommitMessage1R for such identifier {}", id))?;
+    .ok_or_else(|| anyhow!("No RotateCommitMessage1R for such identifier {}", id))?;
 
     let (party1_second_message, random1) =
         Rotation1::key_rotate_second_message(&party2_first_message.0, &m1, &r1);
@@ -548,25 +547,23 @@ pub fn rotate_second(
 #[post("/ecdsa/<id>/recover", format = "json")]
 pub fn recover(state: State<Config>, auth_payload: AuthPayload, id: String) -> Result<Json<u32>> {
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
-        .ok_or_else(|| format_err!("No POS for such identifier {}", id))?;
+        .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
 }
 
-fn validate_auth_token(state: &State<Config>, auth_payload: &AuthPayload) {
+fn validate_auth_token(state: &State<Config>, auth_payload: &AuthPayload) -> Result<()> {
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
-    let check_token_res = get(&http_client, "/api/v1/storage/valid")
+    let check_token_resp = get(&http_client, "/api/v1/storage/valid")
         .bearer_auth(&auth_payload.token)
-        .send();
+        .send()?;
 
-    let resp = match check_token_res {
-        Ok(v) => v,
-        Err(e) => panic!("{}", e),
-    };
-    if !resp.status().is_success() {
-        panic!(
+    if !check_token_resp.status().is_success() {
+        return Err(anyhow!(
             "Failed to validate user's token {:#?}",
-            resp.text().unwrap()
-        );
+            check_token_resp.text()?
+        ));
     }
+
+    Ok(())
 }
