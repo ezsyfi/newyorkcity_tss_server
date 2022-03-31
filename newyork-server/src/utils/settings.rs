@@ -1,22 +1,40 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
+
 pub struct HcmcConfig {
     pub endpoint: String,
 }
 
-pub fn get_hcmc_host(settings: HashMap<String, String>) -> Result<HcmcConfig> {
-    let hcmc_ip = settings
-        .get("HCMC_HOST")
-        .unwrap_or(&"http://localhost".to_string())
-        .to_owned();
+#[derive(Deserialize, Debug)]
+pub struct AppEnv {
+    pub hcmc_host: String,
+    pub hcmc_port: String,
+}
 
-    let hcmc_port = settings
-        .get("HCMC_PORT")
-        .unwrap_or(&"8080".to_string())
-        .to_owned();
+#[derive(Deserialize, Debug)]
+pub struct TestEnv {
+    pub test_signin_url: String,
+    pub test_email: String,
+    pub test_pass: String,
+}
 
+pub fn get_app_env(file_name: &str) -> AppEnv {
+    dotenv::from_filename(file_name).unwrap_or_else(|_| panic!("Failed to read {}", file_name));
+    match envy::from_env::<AppEnv>() {
+        Ok(config) => config,
+        Err(e) => panic!("Couldn't read app env config ({})", e),
+    }
+}
+
+pub fn get_test_env(file_name: &str) -> TestEnv {
+    dotenv::from_filename(file_name).unwrap_or_else(|_| panic!("Failed to read {}", file_name));
+    match envy::from_env::<TestEnv>() {
+        Ok(config) => config,
+        Err(e) => panic!("Couldn't read env config ({})", e),
+    }
+}
+
+pub fn get_hcmc_host(env_configs: AppEnv) -> Result<HcmcConfig> {
     Ok(HcmcConfig {
-        endpoint: format!("{}:{}", hcmc_ip, hcmc_port),
+        endpoint: format!("{}:{}", env_configs.hcmc_host, env_configs.hcmc_port),
     })
 }

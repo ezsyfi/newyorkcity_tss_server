@@ -2,13 +2,12 @@ use rocket;
 use rocket::{Request, Rocket};
 use rocksdb;
 
-use crate::utils::settings::get_hcmc_host;
+use crate::utils::settings::{get_hcmc_host, get_app_env};
 
 use super::routes::*;
 use super::storage::db;
 use super::AppConfig;
 
-use std::collections::HashMap;
 
 #[catch(500)]
 fn internal_error() -> &'static str {
@@ -26,8 +25,8 @@ fn not_found(req: &Request) -> String {
 }
 
 pub fn get_server() -> Rocket {
-    let settings = get_settings_as_map("env.staging.toml");
-    let hcmc_config = get_hcmc_host(settings).unwrap();
+    let env_configs = get_app_env(".env.staging");
+    let hcmc_config = get_hcmc_host(env_configs).unwrap();
     let app_config = AppConfig {
         db: get_db(),
         hcmc: hcmc_config,
@@ -58,17 +57,6 @@ pub fn get_server() -> Rocket {
             ],
         )
         .manage(app_config)
-}
-
-pub fn get_settings_as_map(file_path: &str) -> HashMap<String, String> {
-    let settings = config::Config::builder()
-        .add_source(config::File::with_name(file_path))
-        .build()
-        .unwrap();
-
-    settings
-        .try_deserialize::<HashMap<String, String>>()
-        .unwrap()
 }
 
 fn get_db() -> db::DB {

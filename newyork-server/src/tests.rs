@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test_suites {
 
-    use crate::server::get_settings_as_map;
+    use crate::utils::settings::get_test_env;
 
     use super::super::routes::ecdsa;
     use super::super::server;
@@ -25,7 +25,7 @@ mod test_suites {
     use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
 
     #[derive(Debug, Deserialize)]
-    #[warn(dead_code, non_snake_case)]
+    #[allow(dead_code, non_snake_case)]
     struct AuthToken {
         StatusCode: u16,
         Msg: String,
@@ -294,22 +294,13 @@ mod test_suites {
 
     #[test]
     fn key_gen_and_sign() {
-        let settings = get_settings_as_map("env.test.toml");
+        let env_configs = get_test_env(".env.test");
 
-        let signin_url = settings
-            .get("TEST_SIGNIN_URL")
-            .unwrap_or(&"http://localhost".to_string())
-            .to_owned();
+        let signin_url = env_configs.test_signin_url;
 
-        let test_email = settings
-            .get("TEST_EMAIL")
-            .unwrap_or(&"TEST_EMAIL".to_string())
-            .to_owned();
+        let test_email = env_configs.test_email;
 
-        let test_pass = settings
-            .get("TEST_PASS")
-            .unwrap_or(&"TEST_PASSt".to_string())
-            .to_owned();
+        let test_pass = env_configs.test_pass;
 
         time_test!();
 
