@@ -10,10 +10,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-
+  IMAGE_NAME: newyork_city
 jobs:
   build:
     runs-on: ubuntu-latest
+          
     strategy:
       matrix:
         toolchain:
@@ -59,3 +60,17 @@ jobs:
           docker build -t $IMAGE_NAME .
           docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
           docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+
+      - name: CD
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{secrets.EC2_HOST}}
+            username: ubuntu
+            key: ${{secrets.EC2_SSH_KEY}}
+            envs: IMAGE_NAME
+            script: |
+              docker login 
+              docker pull ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+              cd $HOME && \
+              docker network inspect tss_new && \
+              docker run -d --name nyc -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{secrets.DOCKER_USER}}/$IMAGE_NAME
