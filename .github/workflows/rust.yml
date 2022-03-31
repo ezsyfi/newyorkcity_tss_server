@@ -29,27 +29,31 @@ jobs:
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
         run:
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      - name: Cache
+        id: cache-build
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: CI
-        env:
-          IMAGE_NAME: newyork_city
-          HCMC_HOST: ${{secrets.HCMC_HOST}}
-          HCMC_PORT: ${{secrets.HCMC_PORT}}
-          TEST_EMAIL: ${{secrets.TEST_EMAIL}}
-          TEST_PASS: ${{secrets.TEST_PASS}}
-          TEST_SIGNIN_URL: ${{secrets.TEST_SIGNIN_URL}}
-
         run: |
           cd ./newyork-server
+
           touch env.staging.toml
-          echo HCMC_HOST="$HCMC_HOST" >> env.staging.toml
-          echo HCMC_PORT="$HCMC_PORT" >> env.staging.toml
-          cat env.staging.toml
+          echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
+          echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
+
           touch env.test.toml
-          echo TEST_EMAIL="$TEST_EMAIL" >> env.test.toml
-          echo TEST_PASS="$TEST_PASS" >> env.test.toml
-          echo TEST_SIGNIN_URL="$TEST_SIGNIN_URL" >> env.test.toml
-          cat env.test.toml
+          echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
+          echo TEST_PASS=${{secrets.TEST_PASS}} >> .env.test
+          echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> .env.test
+
           cargo fmt
           cargo test --verbose
           docker build -t $IMAGE_NAME .
