@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y libclang-dev && apt-get install -y libs
 # Copy bin & config files
 COPY --from=builder /app/target/release .
 COPY --from=builder /app/Rocket.toml .
-COPY --from=builder /app/Settings.toml .
+COPY --from=builder /app/.env.staging .
 
 EXPOSE 8001
 
