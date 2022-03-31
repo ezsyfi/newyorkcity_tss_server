@@ -73,4 +73,5 @@ jobs:
               docker pull ${{secrets.DOCKER_USER}}/$IMAGE_NAME
               cd $HOME && \
               docker network inspect tss_new && \
+              docker stop nyc && docker rm nyc && \
               docker run -d --name nyc -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{secrets.DOCKER_USER}}/$IMAGE_NAME
