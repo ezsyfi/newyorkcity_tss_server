@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 use super::super::auth::guards::AuthPayload;
 use super::super::storage::db;
-use super::super::Config;
+use super::super::AppConfig;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 struct HDPos {
     pos: u32,
@@ -87,7 +87,7 @@ pub struct HcmcMasterKey<'a> {
 
 #[post("/ecdsa/keygen/first", format = "json")]
 pub fn first_message(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
 ) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
     validate_auth_token(&state, &auth_payload)?;
@@ -157,7 +157,7 @@ pub fn first_message(
 
 #[post("/ecdsa/keygen/<id>/second", format = "json", data = "<dlog_proof>")]
 pub fn second_message(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     dlog_proof: Json<DLogProof<GE>>,
@@ -225,7 +225,7 @@ pub fn second_message(
 
 #[post("/ecdsa/keygen/<id>/chaincode/first", format = "json")]
 pub fn chain_code_first_message(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
 ) -> Result<Json<Party1FirstMessage>> {
@@ -284,7 +284,7 @@ pub fn chain_code_first_message(
     data = "<cc_party_two_first_message_d_log_proof>"
 )]
 pub fn chain_code_second_message(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     cc_party_two_first_message_d_log_proof: Json<DLogProof<GE>>,
@@ -325,7 +325,7 @@ pub fn chain_code_second_message(
 }
 
 pub fn chain_code_compute_message(
-    state: &State<Config>,
+    state: &State<AppConfig>,
     auth_payload: &AuthPayload,
     id: String,
     cc_party2_public: &GE,
@@ -351,7 +351,7 @@ pub fn chain_code_compute_message(
 }
 
 pub fn master_key(
-    state: &State<Config>,
+    state: &State<AppConfig>,
     auth_payload: &AuthPayload,
     id: String,
 ) -> Result<MasterKey1> {
@@ -406,7 +406,7 @@ pub fn master_key(
     data = "<eph_key_gen_first_message_party_two>"
 )]
 pub fn sign_first(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     eph_key_gen_first_message_party_two: Json<party_two::EphKeyGenFirstMsg>,
@@ -454,7 +454,7 @@ pub struct SignSecondMsgRequest {
 }
 #[post("/ecdsa/sign/<id>/second", format = "json", data = "<request>")]
 pub fn sign_second(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     request: Json<SignSecondMsgRequest>,
@@ -496,7 +496,11 @@ pub fn sign_second(
     Ok(Json(signature_with_recid.unwrap()))
 }
 
-pub fn get_mk(state: &State<Config>, auth_payload: AuthPayload, id: &String) -> Result<MasterKey1> {
+pub fn get_mk(
+    state: &State<AppConfig>,
+    auth_payload: AuthPayload,
+    id: &String,
+) -> Result<MasterKey1> {
     let user_id = &auth_payload.user_id;
     db::get(&state.db, user_id, id, &EcdsaStruct::Party1MasterKey)?
         .ok_or_else(|| anyhow!("No Party1MasterKey for such userId {} - id {}", user_id, id))
@@ -504,7 +508,7 @@ pub fn get_mk(state: &State<Config>, auth_payload: AuthPayload, id: &String) -> 
 
 #[post("/ecdsa/rotate/<id>/first", format = "json")]
 pub fn rotate_first(
-    state: State<Config>,
+    state: State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
 ) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>> {
@@ -549,7 +553,7 @@ pub fn rotate_first(
     data = "<party2_first_message>"
 )]
 pub fn rotate_second(
-    state: State<Config>,
+    state: State<AppConfig>,
     id: String,
     auth_payload: AuthPayload,
     party2_first_message: Json<coin_flip_optimal_rounds::Party2FirstMessage<GE>>,
@@ -624,13 +628,17 @@ pub fn rotate_second(
 }
 
 #[post("/ecdsa/<id>/recover", format = "json")]
-pub fn recover(state: State<Config>, auth_payload: AuthPayload, id: String) -> Result<Json<u32>> {
+pub fn recover(
+    state: State<AppConfig>,
+    auth_payload: AuthPayload,
+    id: String,
+) -> Result<Json<u32>> {
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
 }
 
-fn validate_auth_token(state: &State<Config>, auth_payload: &AuthPayload) -> Result<()> {
+fn validate_auth_token(state: &State<AppConfig>, auth_payload: &AuthPayload) -> Result<()> {
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
     let check_token_resp = get(&http_client, "/api/v1/storage/valid")

@@ -5,7 +5,7 @@
 
 // use super::super::auth::jwt::Claims;
 // use super::super::storage::db;
-// use super::super::Config;
+// use super::super::AppConfig;
 
 // use curv::BigInt;
 // use curv::elliptic::curves::ed25519::{GE, FE};

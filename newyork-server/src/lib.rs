@@ -22,7 +22,7 @@ pub mod storage;
 pub mod tests;
 pub mod utils;
 
-pub struct Config {
+pub struct AppConfig {
     pub db: storage::db::DB,
     pub hcmc: utils::settings::HcmcConfig,
 }
