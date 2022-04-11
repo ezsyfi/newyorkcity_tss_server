@@ -1,23 +1,23 @@
-use reqwest::blocking::RequestBuilder;
+use reqwest::RequestBuilder;
 
 pub struct HttpClient {
-    c: reqwest::blocking::Client,
+    c: reqwest::Client,
     base_url: String,
 }
 
 impl HttpClient {
     pub fn new(base_url: String) -> HttpClient {
         HttpClient {
-            c: reqwest::blocking::Client::new(),
+            c: reqwest::Client::new(),
             base_url,
         }
     }
 }
 
-pub fn get(client: &HttpClient, path: &str) -> RequestBuilder {
+pub async fn get(client: &HttpClient, path: &str) -> RequestBuilder {
     client.c.get(format!("{}{}", client.base_url, path))
 }
 
-pub fn post(client: &HttpClient, path: &str) -> RequestBuilder {
+pub async fn post(client: &HttpClient, path: &str) -> RequestBuilder {
     client.c.post(format!("{}{}", client.base_url, path))
 }

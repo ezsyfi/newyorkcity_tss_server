@@ -1,11 +1,12 @@
 
 
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use rocket::State;
-use rocket_contrib::json::Json;
+use rocket::serde::json::Json;
 use web3::{Web3, transports};
 use web3::types::{TransactionParameters, Address, U256, AccessList, U64, SignedTransaction};
+
 
 use super::super::auth::guards::AuthPayload;
 use super::super::AppConfig;
@@ -40,13 +41,14 @@ const EIP1559_TX_ID: u64 = 2;
 
 #[post("/eth/tx/params", format = "json", data = "<tx_info>")]
 pub async fn tx_parameters(
-    state: State<'static, AppConfig>,
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     tx_info: Json<EthTxParamsReqBody>
-) -> Result<EthTxParamsResp> {
+) -> Result<Json<EthTxParamsResp>, rocket::response::Debug<anyhow::Error>> {
     print!("tx_info {:?}", tx_info);
 
     let tx_params = create_eth_transaction(tx_info.to_address, tx_info.eth_value)?;
+
     println!("tx_params {:?}", tx_params);
     println!("alchemy_api {:?}", &state.alchemy_api);
 
@@ -77,7 +79,7 @@ pub async fn tx_parameters(
 
     println!("{:?}", resp);
 
-    Ok(resp)
+    Ok(Json(resp))
 }
 
 // #[post("/eth/tx/sign", format = "json", data = "<tx_info>")]
