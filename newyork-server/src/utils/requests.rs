@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use reqwest::RequestBuilder;
 use rocket::State;
 
-use crate::{AppConfig, auth::guards::AuthPayload};
+use crate::{auth::guards::AuthPayload, AppConfig};
 
 pub struct HttpClient {
     c: reqwest::Client,
@@ -26,8 +26,10 @@ pub async fn post(client: &HttpClient, path: &str) -> RequestBuilder {
     client.c.post(format!("{}{}", client.base_url, path))
 }
 
-
-pub async fn validate_auth_token(state: &State<AppConfig>, auth_payload: &AuthPayload) -> Result<()> {
+pub async fn validate_auth_token(
+    state: &State<AppConfig>,
+    auth_payload: &AuthPayload,
+) -> Result<()> {
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
     let check_token_resp = get(&http_client, "/api/v1/storage/valid")

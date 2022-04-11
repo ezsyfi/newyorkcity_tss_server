@@ -1,14 +1,12 @@
 use rocket;
-use rocket::{Request};
+use rocket::Request;
 use rocksdb;
-
 
 use crate::utils::settings::{get_app_env, get_hcmc_host};
 
 use super::routes::*;
 use super::storage::db;
 use super::AppConfig;
-
 
 #[catch(500)]
 fn internal_error() -> &'static str {
@@ -32,7 +30,7 @@ pub fn get_server() -> _ {
     let app_config = AppConfig {
         db: get_db(),
         hcmc: hcmc_config,
-        alchemy_api: env_configs.alchemy_api
+        alchemy_api: env_configs.alchemy_api,
     };
 
     rocket::build()

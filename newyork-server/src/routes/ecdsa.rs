@@ -2,8 +2,8 @@
 
 use std::fmt::Debug;
 
+use crate::utils::requests::{get, post, validate_auth_token, HttpClient};
 use crate::AnyhowError;
-use crate::utils::requests::{get, post, HttpClient, validate_auth_token};
 
 use anyhow::{anyhow, Result};
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
@@ -498,10 +498,7 @@ pub fn rotate_first(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-) -> Result<
-    Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>,
-    AnyhowError,
-> {
+) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>, AnyhowError> {
     let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
     let user_id = &auth_payload.user_id;
     db::insert(

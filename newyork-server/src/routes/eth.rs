@@ -1,11 +1,13 @@
 use anyhow::{anyhow, Result};
 use rocket::serde::json::Json;
 use rocket::State;
-use web3::types::{AccessList, Address, SignedTransaction, TransactionParameters, U256, U64, H256, Bytes};
+use web3::types::{
+    AccessList, Address, Bytes, SignedTransaction, TransactionParameters, H256, U256, U64,
+};
 use web3::{transports, Web3};
 
-use crate::AnyhowError;
 use crate::utils::requests::validate_auth_token;
+use crate::AnyhowError;
 
 use super::super::auth::guards::AuthPayload;
 use super::super::AppConfig;
@@ -83,15 +85,13 @@ pub async fn tx_parameters(
 pub async fn tx_send(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
-    signed: Json<EthSendTxReqBody>
+    signed: Json<EthSendTxReqBody>,
 ) -> Result<Json<EthSendTxResp>, AnyhowError> {
     validate_auth_token(state, &auth_payload).await?;
     let web3 = establish_web3_connection(&state.alchemy_api).await?;
     let tx_hash = send_tx(web3, signed.raw_tx.clone()).await?;
 
-    Ok(Json(EthSendTxResp {
-        tx_hash
-    }))
+    Ok(Json(EthSendTxResp { tx_hash }))
 }
 
 fn create_eth_transaction(to: Address, eth_value: f64) -> Result<TransactionParameters> {
@@ -146,10 +146,7 @@ pub async fn get_chain_required_params(
 }
 
 pub async fn send_tx(web3: Web3<transports::WebSocket>, raw_tx: Bytes) -> Result<H256> {
-    let tx_hash = web3
-        .eth()
-        .send_raw_transaction(raw_tx)
-        .await?;
+    let tx_hash = web3.eth().send_raw_transaction(raw_tx).await?;
     Ok(tx_hash)
 }
 
