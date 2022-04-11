@@ -2,6 +2,7 @@
 
 use std::fmt::Debug;
 
+use crate::AnyhowError;
 use crate::utils::requests::{get, post, HttpClient};
 
 use anyhow::{anyhow, Result};
@@ -89,7 +90,7 @@ pub struct HcmcMasterKey<'a> {
 pub async fn first_message(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
-) -> Result<Json<(String, party_one::KeyGenFirstMsg)>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<(String, party_one::KeyGenFirstMsg)>, AnyhowError> {
     validate_auth_token(state, &auth_payload).await?;
     let id = Uuid::new_v4().to_string();
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
@@ -161,7 +162,7 @@ pub fn second_message(
     auth_payload: AuthPayload,
     id: String,
     dlog_proof: Json<DLogProof<GE>>,
-) -> Result<Json<party1::KeyGenParty1Message2>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<party1::KeyGenParty1Message2>, AnyhowError> {
     let party2_public: GE = dlog_proof.0.pk;
     let user_id = &auth_payload.user_id;
 
@@ -228,7 +229,7 @@ pub fn chain_code_first_message(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-) -> Result<Json<Party1FirstMessage>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<Party1FirstMessage>, AnyhowError> {
     let (cc_party_one_first_message, cc_comm_witness, cc_ec_key_pair1) =
         chain_code::party1::ChainCode1::chain_code_first_message();
     let user_id = &auth_payload.user_id;
@@ -288,7 +289,7 @@ pub async fn chain_code_second_message(
     auth_payload: AuthPayload,
     id: String,
     cc_party_two_first_message_d_log_proof: Json<DLogProof<GE>>,
-) -> Result<Json<Party1SecondMessage<GE>>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<Party1SecondMessage<GE>>, AnyhowError> {
     let user_id = &auth_payload.user_id;
 
     let cc_comm_witness: CommWitness<GE> =
@@ -396,7 +397,7 @@ pub async fn sign_first(
     auth_payload: AuthPayload,
     id: String,
     eph_key_gen_first_message_party_two: Json<party_two::EphKeyGenFirstMsg>,
-) -> Result<Json<party_one::EphKeyGenFirstMsg>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<party_one::EphKeyGenFirstMsg>, AnyhowError> {
     validate_auth_token(state, &auth_payload).await?;
     let (sign_party_one_first_message, eph_ec_key_pair_party1) = MasterKey1::sign_first_message();
     let user_id = &auth_payload.user_id;
@@ -444,7 +445,7 @@ pub fn sign_second(
     auth_payload: AuthPayload,
     id: String,
     request: Json<SignSecondMsgRequest>,
-) -> Result<Json<party_one::SignatureRecid>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<party_one::SignatureRecid>, AnyhowError> {
     let user_id = &auth_payload.user_id;
     let master_key: MasterKey1 =
         db::get(&state.db, user_id, &id, &EcdsaStruct::Party1MasterKey)?
@@ -499,7 +500,7 @@ pub fn rotate_first(
     id: String,
 ) -> Result<
     Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>,
-    rocket::response::Debug<anyhow::Error>,
+    AnyhowError,
 > {
     let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
     let user_id = &auth_payload.user_id;
@@ -551,7 +552,7 @@ pub fn rotate_second(
         coin_flip_optimal_rounds::Party1SecondMessage<GE>,
         party1::RotationParty1Message1,
     )>,
-    rocket::response::Debug<anyhow::Error>,
+    AnyhowError,
 > {
     let party_one_master_key = get_mk(state, auth_payload.clone(), &id)?;
     let user_id = &auth_payload.user_id;
@@ -622,7 +623,7 @@ pub fn recover(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-) -> Result<Json<u32>, rocket::response::Debug<anyhow::Error>> {
+) -> Result<Json<u32>, AnyhowError> {
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))

@@ -1,6 +1,6 @@
 #![recursion_limit = "128"]
-#![feature(proc_macro_hygiene)]
-#![feature(decl_macro)]
+// #![feature(proc_macro_hygiene)]
+// #![feature(decl_macro)]
 #[macro_use]
 extern crate rocket;
 
@@ -27,3 +27,5 @@ pub struct AppConfig {
     pub hcmc: utils::settings::HcmcConfig,
     pub alchemy_api: String,
 }
+
+pub type AnyhowError = rocket::response::Debug<anyhow::Error>;
