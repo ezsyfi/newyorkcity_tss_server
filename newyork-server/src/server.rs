@@ -24,12 +24,14 @@ fn not_found(req: &Request) -> String {
     format!("Unknown route '{}'.", req.uri())
 }
 
+#[launch]
 pub fn get_server() -> Rocket {
     let env_configs = get_app_env(".env.staging");
-    let hcmc_config = get_hcmc_host(env_configs).unwrap();
+    let hcmc_config = get_hcmc_host(&env_configs).unwrap();
     let app_config = AppConfig {
         db: get_db(),
         hcmc: hcmc_config,
+        alchemy_api: env_configs.alchemy_api.to_string()
     };
 
     rocket::ignite()
@@ -47,6 +49,7 @@ pub fn get_server() -> Rocket {
                 ecdsa::rotate_first,
                 ecdsa::rotate_second,
                 ecdsa::recover,
+                eth::tx_parameters,
                 // schnorr::keygen_first,
                 // schnorr::keygen_second,
                 // schnorr::keygen_third,
