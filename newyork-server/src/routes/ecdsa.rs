@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 
 use crate::AnyhowError;
-use crate::utils::requests::{get, post, HttpClient};
+use crate::utils::requests::{get, post, HttpClient, validate_auth_token};
 
 use anyhow::{anyhow, Result};
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
@@ -627,25 +627,6 @@ pub fn recover(
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
-}
-
-async fn validate_auth_token(state: &State<AppConfig>, auth_payload: &AuthPayload) -> Result<()> {
-    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
-
-    let check_token_resp = get(&http_client, "/api/v1/storage/valid")
-        .await
-        .bearer_auth(&auth_payload.token)
-        .send()
-        .await?;
-
-    if !check_token_resp.status().is_success() {
-        return Err(anyhow!(
-            "Failed to validate user's token {:#?}",
-            check_token_resp.text().await?
-        ));
-    }
-
-    Ok(())
 }
 
 async fn send_store_mk_req(

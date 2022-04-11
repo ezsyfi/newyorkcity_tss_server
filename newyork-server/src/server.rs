@@ -51,6 +51,7 @@ pub fn get_server() -> _ {
                 ecdsa::rotate_second,
                 ecdsa::recover,
                 eth::tx_parameters,
+                eth::tx_send,
                 // schnorr::keygen_first,
                 // schnorr::keygen_second,
                 // schnorr::keygen_third,

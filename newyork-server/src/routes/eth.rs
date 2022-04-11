@@ -1,15 +1,16 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rocket::serde::json::Json;
 use rocket::State;
-use web3::types::{AccessList, Address, SignedTransaction, TransactionParameters, U256, U64};
+use web3::types::{AccessList, Address, SignedTransaction, TransactionParameters, U256, U64, H256, Bytes};
 use web3::{transports, Web3};
 
 use crate::AnyhowError;
+use crate::utils::requests::validate_auth_token;
 
 use super::super::auth::guards::AuthPayload;
 use super::super::AppConfig;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct EthTxParamsResp {
     pub to: Option<Address>,
     pub nonce: U256,
@@ -23,17 +24,22 @@ pub struct EthTxParamsResp {
     pub chain_id: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct EthTxParamsReqBody {
     pub from_address: Address,
     pub to_address: Address,
     pub eth_value: f64,
 }
 
-// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-// pub struct EthSignedTx {
-//     pub signed_tx: SignedTransaction,
-// }
+#[derive(Serialize, Debug, PartialEq, Clone)]
+pub struct EthSendTxResp {
+    pub tx_hash: H256,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone)]
+pub struct EthSendTxReqBody {
+    pub raw_tx: Bytes,
+}
 
 const EIP1559_TX_ID: u64 = 2;
 
@@ -43,14 +49,9 @@ pub async fn tx_parameters(
     auth_payload: AuthPayload,
     tx_info: Json<EthTxParamsReqBody>,
 ) -> Result<Json<EthTxParamsResp>, AnyhowError> {
-
+    validate_auth_token(state, &auth_payload).await?;
     let tx_params = create_eth_transaction(tx_info.to_address, tx_info.eth_value)?;
-
-    println!("tx_params {:?}", tx_params);
-    println!("alchemy_api {:?}", &state.alchemy_api);
-
     let web3 = establish_web3_connection(&state.alchemy_api).await?;
-    println!("web3 {:?}", web3);
 
     let (nonce, gas_price, chain_id) =
         get_chain_required_params(tx_info.from_address, tx_params.clone(), web3).await?;
@@ -78,36 +79,20 @@ pub async fn tx_parameters(
     Ok(Json(resp))
 }
 
-// #[post("/eth/tx/sign", format = "json", data = "<tx_info>")]
-// pub fn tx_params(
-//     state: State<AppConfig>,
-//     auth_payload: AuthPayload,
-//     tx_info: Json<EthTxParamsReqBody>
-// ) -> Result<Json<EthTxParamsResp>> {
+#[post("/eth/tx/send", format = "json", data = "<signed>")]
+pub async fn tx_send(
+    state: &State<AppConfig>,
+    auth_payload: AuthPayload,
+    signed: Json<EthSendTxReqBody>
+) -> Result<Json<EthSendTxResp>, AnyhowError> {
+    validate_auth_token(state, &auth_payload).await?;
+    let web3 = establish_web3_connection(&state.alchemy_api).await?;
+    let tx_hash = send_tx(web3, signed.raw_tx.clone()).await?;
 
-//     let tx_params = create_eth_transaction(tx_info.to_address, tx_info.eth_value)?;
-//     let web3 = establish_web3_connection(&state.alchemy_api)?;
-//     let (nonce, gas_price, chain_id) = get_chain_required_params(tx_info.from_address, &tx_params, &web3)?;
-
-//     let max_priority_fee_per_gas = match tx_params.transaction_type {
-//         Some(tx_type) if tx_type == U64::from(EIP1559_TX_ID) => {
-//             tx_params.max_priority_fee_per_gas.unwrap_or(gas_price)
-//         }
-//         _ => gas_price,
-//     };
-//     Ok(Json(EthTxParamsResp {
-//         to: tx_params.to,
-//         nonce,
-//         gas: tx_params.gas,
-//         gas_price,
-//         value: tx_params.value,
-//         data: tx_params.data.0,
-//         transaction_type: tx_params.transaction_type,
-//         access_list: tx_params.access_list.unwrap_or_default(),
-//         max_priority_fee_per_gas,
-//         chain_id
-//     }))
-// }
+    Ok(Json(EthSendTxResp {
+        tx_hash
+    }))
+}
 
 fn create_eth_transaction(to: Address, eth_value: f64) -> Result<TransactionParameters> {
     Ok(TransactionParameters {
@@ -158,6 +143,14 @@ pub async fn get_chain_required_params(
     .await?;
 
     Ok((nonce, gas_price, chain_id.as_u64()))
+}
+
+pub async fn send_tx(web3: Web3<transports::WebSocket>, raw_tx: Bytes) -> Result<H256> {
+    let tx_hash = web3
+        .eth()
+        .send_raw_transaction(raw_tx)
+        .await?;
+    Ok(tx_hash)
 }
 
 pub fn eth_to_wei(eth_value: f64) -> U256 {
