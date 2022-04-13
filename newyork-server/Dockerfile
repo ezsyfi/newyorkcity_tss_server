@@ -9,7 +9,8 @@ RUN apt-get clean
 RUN apt-get update
 RUN apt-get -y install build-essential pkg-config libssl-dev
 RUN apt-get install -y libclang-dev llvm clang
-RUN cargo build --verbose
+RUN apt-get -y install libgmp3-dev
+RUN cargo build --release
 
 FROM ubuntu:latest
 
