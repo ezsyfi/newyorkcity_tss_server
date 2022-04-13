@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use crate::utils::requests::{get, post, validate_auth_token, HttpClient};
+use crate::utils::requests::{post, validate_auth_token, HttpClient};
 use crate::AnyhowError;
 
 use anyhow::{anyhow, Result};

@@ -1,10 +1,9 @@
 name: Cargo Build & Test
 
 on:
-  push:
-    branches: [dev]
   pull_request:
     branches: [dev]
+    types: [opened, closed]
   workflow_dispatch:
     branches: [dev]
 
@@ -13,8 +12,9 @@ env:
   IMAGE_NAME: newyork_city
 jobs:
   build:
+    if: ${{ github.event.action }} == 'opened'
     runs-on: ubuntu-latest
-          
+
     strategy:
       matrix:
         toolchain:
@@ -24,12 +24,6 @@ jobs:
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: rustup component add rustfmt
 
-      - name: Docker Login
-        env:
-          DOCKER_USER: ${{secrets.DOCKER_USER}}
-          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-        run:
-          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - name: Cache
         id: cache-build
         uses: actions/cache@v3
@@ -41,37 +35,50 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Test
+        run: |
+          cd ./newyork-server
+          touch env.test.toml
+          echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
+          echo TEST_PASS=${{secrets.TEST_PASS}} >> .env.test
+          echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> .env.test
+          cargo fmt
+          cargo test --verbose
+  deploy:
+    needs: build
+    if: ${{ github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
 
-      - name: CI
+    steps:
+      - name: Docker Login
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+        run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+        
+      - name: Docker build
         run: |
           cd ./newyork-server
 
           touch env.staging.toml
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
           echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
-
-          touch env.test.toml
-          echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
-          echo TEST_PASS=${{secrets.TEST_PASS}} >> .env.test
-          echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> .env.test
-
-          cargo fmt
-          cargo test --verbose
+          
           docker build -t $IMAGE_NAME .
           docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
           docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
 
-      - name: CD
+      - name: Docker deploy
         uses: appleboy/ssh-action@master
         with:
-            host: ${{secrets.EC2_HOST}}
-            username: ubuntu
-            key: ${{secrets.EC2_SSH_KEY}}
-            envs: IMAGE_NAME
-            script: |
-              docker login 
-              docker pull ${{secrets.DOCKER_USER}}/$IMAGE_NAME
-              cd $HOME && \
-              docker network inspect tss_new && \
-              docker stop nyc || true && docker rm nyc || true && \
-              docker run -d --name nyc -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+          host: ${{secrets.EC2_HOST}}
+          username: ubuntu
+          key: ${{secrets.EC2_SSH_KEY}}
+          envs: IMAGE_NAME
+          script: |
+            docker login 
+            docker pull ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+            cd $HOME && \
+            docker network inspect tss_new && \
+            docker stop nyc || true && docker rm nyc || true && \
+            docker run -d --name nyc -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{secrets.DOCKER_USER}}/$IMAGE_NAME

@@ -295,11 +295,8 @@ mod test_suites {
     #[test]
     fn key_gen_and_sign() {
         let env_configs = get_test_env(".env.test");
-
         let signin_url = env_configs.test_signin_url;
-
         let test_email = env_configs.test_email;
-
         let test_pass = env_configs.test_pass;
 
         time_test!();
@@ -321,7 +318,7 @@ mod test_suites {
         let auth_header = Header::new("Authorization", format!("Bearer {}", http_resp.Msg));
         let user_id_header = Header::new("user_id", test_email);
 
-        let client = Client::new(server::get_server()).expect("valid rocket instance");
+        let client = Client::tracked(server::get_server()).expect("valid rocket instance");
 
         let (id, master_key_2): (String, MasterKey2) =
             key_gen(&client, auth_header.clone(), user_id_header.clone());
@@ -347,7 +344,7 @@ mod test_suites {
 
     #[test]
     fn authentication_test_invalid_token() {
-        let client = Client::new(server::get_server()).expect("valid rocket instance");
+        let client = Client::tracked(server::get_server()).expect("valid rocket instance");
 
         let auth_header = Header::new("Authorization", "Bearer a");
         let response = client
@@ -361,7 +358,7 @@ mod test_suites {
 
     #[test]
     fn authentication_test_expired_token() {
-        let client = Client::new(server::get_server()).expect("valid rocket instance");
+        let client = Client::tracked(server::get_server()).expect("valid rocket instance");
 
         let token: String = "Bearer eyJraWQiOiJZeEdoUlhsTytZSWpjU2xWZFdVUFA1dHhWd\
                              FRSTTNmTndNZTN4QzVnXC9YZz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJjNDAz\

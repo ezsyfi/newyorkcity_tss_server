@@ -11,7 +11,6 @@ extern crate log;
 #[cfg(test)]
 #[macro_use]
 extern crate time_test;
-extern crate jsonwebtoken as jwt;
 
 pub mod auth;
 pub mod routes;

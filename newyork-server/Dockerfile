@@ -1,13 +1,15 @@
-FROM rust:latest as builder
-
+FROM rust:1.60.0-slim-buster as builder
 WORKDIR /app
 COPY . .
+ARG DEBIAN_FRONTEND=noninteractive
+# RUN rustup default nightly
+RUN rustup component add rustfmt
 
-RUN rustup default nightly
 RUN apt-get clean
 RUN apt-get update
-RUN apt-get install -y libclang-dev
-RUN cargo build --release
+RUN apt-get -y install build-essential pkg-config libssl-dev
+RUN apt-get install -y libclang-dev llvm clang
+RUN cargo build --verbose
 
 FROM ubuntu:latest
 
@@ -24,5 +26,3 @@ COPY --from=builder /app/.env.staging .
 EXPOSE 8001
 
 CMD ["./server_exec"]
-
-

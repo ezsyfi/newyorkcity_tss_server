@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use rocket::serde::json::Json;
 use rocket::State;
 use web3::types::{
-    AccessList, Address, Bytes, SignedTransaction, TransactionParameters, H256, U256, U64,
+    AccessList, Address, Bytes, TransactionParameters, H256, U256, U64,
 };
 use web3::{transports, Web3};
 
