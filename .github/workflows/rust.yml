@@ -50,9 +50,8 @@ jobs:
           cargo fmt
           cargo test --verbose
   deploy:
-    if: ${{ github.event.action }} == 'opened'
-    # needs: build
-    # if: ${{ github.event.pull_request.merged }}
+    needs: build
+    if: ${{ github.event.pull_request.merged }}
     runs-on: ubuntu-latest
     
     steps:

@@ -2,7 +2,6 @@ FROM rust:1.60.0-slim-buster as builder
 WORKDIR /app
 COPY . .
 ARG DEBIAN_FRONTEND=noninteractive
-# RUN rustup default nightly
 RUN rustup component add rustfmt
 
 RUN apt-get clean
@@ -12,7 +11,7 @@ RUN apt-get install -y libclang-dev llvm clang
 RUN apt-get -y install libgmp3-dev
 RUN cargo build --release
 
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
 WORKDIR /app
 
