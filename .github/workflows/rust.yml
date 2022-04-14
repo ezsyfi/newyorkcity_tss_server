@@ -37,6 +37,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Test
         run: |
+          touch .env.staging
+          echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
+          echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
+          echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
+
           cd ./newyork-server
           touch env.test.toml
           echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
@@ -45,8 +50,9 @@ jobs:
           cargo fmt
           cargo test --verbose
   deploy:
-    needs: build
-    if: ${{ github.event.pull_request.merged }}
+    if: ${{ github.event.action }} == 'opened'
+    # needs: build
+    # if: ${{ github.event.pull_request.merged }}
     runs-on: ubuntu-latest
 
     steps:
@@ -60,9 +66,10 @@ jobs:
         run: |
           cd ./newyork-server
 
-          touch env.staging.toml
+          touch .env.staging
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
           echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
+          echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
           
           docker build -t $IMAGE_NAME .
           docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
