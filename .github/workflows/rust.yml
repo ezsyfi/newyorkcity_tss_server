@@ -37,13 +37,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Test
         run: |
+          cd ./newyork-server
           touch .env.staging
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
           echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
           echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
 
-          cd ./newyork-server
-          touch env.test.toml
+          touch .env.test
           echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
           echo TEST_PASS=${{secrets.TEST_PASS}} >> .env.test
           echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> .env.test
@@ -54,14 +54,15 @@ jobs:
     # needs: build
     # if: ${{ github.event.pull_request.merged }}
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Docker Login
         env:
           DOCKER_USER: ${{secrets.DOCKER_USER}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
         run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-        
+
+      - uses: actions/checkout@v3
       - name: Docker build
         run: |
           cd ./newyork-server
