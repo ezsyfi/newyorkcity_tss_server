@@ -9,7 +9,7 @@ mod test_suites {
     use rocket::http::ContentType;
     use rocket::http::Header;
     use rocket::http::Status;
-    use rocket::local::Client;
+    use rocket::local::blocking::Client;
     use serde_json;
     use serde_json::json;
     use std::time::Instant;
@@ -41,7 +41,7 @@ mod test_suites {
         /*************** START: FIRST MESSAGE ***************/
         let start = Instant::now();
 
-        let mut response = client
+        let response = client
             .post("/ecdsa/keygen/first")
             .header(ContentType::JSON)
             .header(auth_header.clone())
@@ -54,7 +54,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let res_body = response.body_string().unwrap();
+        let res_body = response.into_string().unwrap();
         let (id, kg_party_one_first_message): (String, party_one::KeyGenFirstMsg) =
             serde_json::from_str(&res_body).unwrap();
 
@@ -74,7 +74,7 @@ mod test_suites {
 
         let start = Instant::now();
 
-        let mut response = client
+        let response = client
             .post(format!("/ecdsa/keygen/{}/second", id))
             .body(body)
             .header(ContentType::JSON)
@@ -88,7 +88,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let res_body = response.body_string().unwrap();
+        let res_body = response.into_string().unwrap();
         let kg_party_one_second_message: party1::KeyGenParty1Message2 =
             serde_json::from_str(&res_body).unwrap();
 
@@ -113,7 +113,7 @@ mod test_suites {
         /*************** START: CHAINCODE FIRST MESSAGE ***************/
         let start = Instant::now();
 
-        let mut response = client
+        let response = client
             .post(format!("/ecdsa/keygen/{}/chaincode/first", id))
             .header(ContentType::JSON)
             .header(auth_header.clone())
@@ -126,7 +126,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let res_body = response.body_string().unwrap();
+        let res_body = response.into_string().unwrap();
         let cc_party_one_first_message: Party1FirstMessage =
             serde_json::from_str(&res_body).unwrap();
 
@@ -145,7 +145,7 @@ mod test_suites {
 
         let start = Instant::now();
 
-        let mut response = client
+        let response = client
             .post(format!("/ecdsa/keygen/{}/chaincode/second", id))
             .body(body)
             .header(ContentType::JSON)
@@ -159,7 +159,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let res_body = response.body_string().unwrap();
+        let res_body = response.into_string().unwrap();
         let cc_party_one_second_message: Party1SecondMessage<GE> =
             serde_json::from_str(&res_body).unwrap();
 
@@ -224,7 +224,7 @@ mod test_suites {
 
         let start = Instant::now();
 
-        let mut response = client
+        let response = client
             .post(format!("/ecdsa/sign/{}/first", id))
             .body(body)
             .header(ContentType::JSON)
@@ -238,7 +238,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let res_body = response.body_string().unwrap();
+        let res_body = response.into_string().unwrap();
         let sign_party_one_first_message: party_one::EphKeyGenFirstMsg =
             serde_json::from_str(&res_body).unwrap();
 
@@ -272,7 +272,7 @@ mod test_suites {
 
         let start = Instant::now();
 
-        let mut response = client
+        let response = client
             .post(format!("/ecdsa/sign/{}/second", id))
             .body(body)
             .header(ContentType::JSON)
@@ -286,7 +286,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let res_body = response.body_string().unwrap();
+        let res_body = response.into_string().unwrap();
         let signature_recid: party_one::SignatureRecid = serde_json::from_str(&res_body).unwrap();
 
         signature_recid
@@ -295,11 +295,8 @@ mod test_suites {
     #[test]
     fn key_gen_and_sign() {
         let env_configs = get_test_env(".env.test");
-
         let signin_url = env_configs.test_signin_url;
-
         let test_email = env_configs.test_email;
-
         let test_pass = env_configs.test_pass;
 
         time_test!();
@@ -321,7 +318,7 @@ mod test_suites {
         let auth_header = Header::new("Authorization", format!("Bearer {}", http_resp.Msg));
         let user_id_header = Header::new("user_id", test_email);
 
-        let client = Client::new(server::get_server()).expect("valid rocket instance");
+        let client = Client::tracked(server::get_server()).expect("valid rocket instance");
 
         let (id, master_key_2): (String, MasterKey2) =
             key_gen(&client, auth_header.clone(), user_id_header.clone());
@@ -347,7 +344,7 @@ mod test_suites {
 
     #[test]
     fn authentication_test_invalid_token() {
-        let client = Client::new(server::get_server()).expect("valid rocket instance");
+        let client = Client::tracked(server::get_server()).expect("valid rocket instance");
 
         let auth_header = Header::new("Authorization", "Bearer a");
         let response = client
@@ -361,7 +358,7 @@ mod test_suites {
 
     #[test]
     fn authentication_test_expired_token() {
-        let client = Client::new(server::get_server()).expect("valid rocket instance");
+        let client = Client::tracked(server::get_server()).expect("valid rocket instance");
 
         let token: String = "Bearer eyJraWQiOiJZeEdoUlhsTytZSWpjU2xWZFdVUFA1dHhWd\
                              FRSTTNmTndNZTN4QzVnXC9YZz0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJjNDAz\

@@ -1,13 +1,12 @@
 use rocket;
-use rocket::{Request, Rocket};
+use rocket::Request;
 use rocksdb;
 
-use crate::utils::settings::{get_hcmc_host, get_app_env};
+use crate::utils::settings::{get_app_env, get_hcmc_host};
 
 use super::routes::*;
 use super::storage::db;
 use super::AppConfig;
-
 
 #[catch(500)]
 fn internal_error() -> &'static str {
@@ -24,16 +23,18 @@ fn not_found(req: &Request) -> String {
     format!("Unknown route '{}'.", req.uri())
 }
 
-pub fn get_server() -> Rocket {
+#[launch]
+pub fn get_server() -> _ {
     let env_configs = get_app_env(".env.staging");
-    let hcmc_config = get_hcmc_host(env_configs).unwrap();
+    let hcmc_config = get_hcmc_host(&env_configs).unwrap();
     let app_config = AppConfig {
         db: get_db(),
         hcmc: hcmc_config,
+        alchemy_api: env_configs.alchemy_api,
     };
 
-    rocket::ignite()
-        .register(catchers![internal_error, not_found, bad_request])
+    rocket::build()
+        .register("/", catchers![internal_error, not_found, bad_request])
         .mount(
             "/",
             routes![
@@ -47,6 +48,8 @@ pub fn get_server() -> Rocket {
                 ecdsa::rotate_first,
                 ecdsa::rotate_second,
                 ecdsa::recover,
+                eth::tx_parameters,
+                eth::tx_send,
                 // schnorr::keygen_first,
                 // schnorr::keygen_second,
                 // schnorr::keygen_third,

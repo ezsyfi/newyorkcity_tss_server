@@ -8,6 +8,7 @@ pub struct HcmcConfig {
 pub struct AppEnv {
     pub hcmc_host: String,
     pub hcmc_port: String,
+    pub alchemy_api: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -33,7 +34,7 @@ pub fn get_test_env(file_name: &str) -> TestEnv {
     }
 }
 
-pub fn get_hcmc_host(env_configs: AppEnv) -> Result<HcmcConfig> {
+pub fn get_hcmc_host(env_configs: &AppEnv) -> Result<HcmcConfig> {
     Ok(HcmcConfig {
         endpoint: format!("{}:{}", env_configs.hcmc_host, env_configs.hcmc_port),
     })

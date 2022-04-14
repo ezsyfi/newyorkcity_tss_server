@@ -1,4 +1,6 @@
 use server_lib::server;
-fn main() {
-    server::get_server().launch();
+
+#[rocket::main]
+async fn main() {
+    let _ = server::get_server().launch().await;
 }

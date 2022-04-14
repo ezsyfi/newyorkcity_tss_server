@@ -1,6 +1,6 @@
 use rocket::http::Status;
+use rocket::outcome::Outcome;
 use rocket::request::{self, FromRequest, Request};
-use rocket::Outcome;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuthPayload {
@@ -9,10 +9,11 @@ pub struct AuthPayload {
 }
 const TOKEN_TYPE: &str = "Bearer";
 
-impl<'a, 'r> FromRequest<'a, 'r> for AuthPayload {
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for AuthPayload {
     type Error = ();
 
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<AuthPayload, ()> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let authorization_header: &str = match request.headers().get_one("Authorization") {
             Some(header) => header,
             None => return Outcome::Failure((Status::Unauthorized, ())),

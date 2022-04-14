@@ -2,7 +2,8 @@
 
 use std::fmt::Debug;
 
-use crate::utils::requests::{get, post, HttpClient};
+use crate::utils::requests::{post, validate_auth_token, HttpClient};
+use crate::AnyhowError;
 
 use anyhow::{anyhow, Result};
 use curv::cryptographic_primitives::proofs::sigma_dlog::*;
@@ -17,8 +18,8 @@ use kms::chain_code::two_party as chain_code;
 use kms::ecdsa::two_party::*;
 use kms::rotation::two_party::party1::Rotation1;
 use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
+use rocket::serde::json::Json;
 use rocket::State;
-use rocket_contrib::json::Json;
 use uuid::Uuid;
 
 use super::super::auth::guards::AuthPayload;
@@ -86,11 +87,11 @@ pub struct HcmcMasterKey<'a> {
 }
 
 #[post("/ecdsa/keygen/first", format = "json")]
-pub fn first_message(
-    state: State<AppConfig>,
+pub async fn first_message(
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
-) -> Result<Json<(String, party_one::KeyGenFirstMsg)>> {
-    validate_auth_token(&state, &auth_payload)?;
+) -> Result<Json<(String, party_one::KeyGenFirstMsg)>, AnyhowError> {
+    validate_auth_token(state, &auth_payload).await?;
     let id = Uuid::new_v4().to_string();
     let (key_gen_first_msg, comm_witness, ec_key_pair) = MasterKey1::key_gen_first_message();
     let user_id = &auth_payload.user_id;
@@ -157,11 +158,11 @@ pub fn first_message(
 
 #[post("/ecdsa/keygen/<id>/second", format = "json", data = "<dlog_proof>")]
 pub fn second_message(
-    state: State<AppConfig>,
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     dlog_proof: Json<DLogProof<GE>>,
-) -> Result<Json<party1::KeyGenParty1Message2>> {
+) -> Result<Json<party1::KeyGenParty1Message2>, AnyhowError> {
     let party2_public: GE = dlog_proof.0.pk;
     let user_id = &auth_payload.user_id;
 
@@ -225,10 +226,10 @@ pub fn second_message(
 
 #[post("/ecdsa/keygen/<id>/chaincode/first", format = "json")]
 pub fn chain_code_first_message(
-    state: State<AppConfig>,
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-) -> Result<Json<Party1FirstMessage>> {
+) -> Result<Json<Party1FirstMessage>, AnyhowError> {
     let (cc_party_one_first_message, cc_comm_witness, cc_ec_key_pair1) =
         chain_code::party1::ChainCode1::chain_code_first_message();
     let user_id = &auth_payload.user_id;
@@ -283,12 +284,12 @@ pub fn chain_code_first_message(
     format = "json",
     data = "<cc_party_two_first_message_d_log_proof>"
 )]
-pub fn chain_code_second_message(
-    state: State<AppConfig>,
+pub async fn chain_code_second_message(
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     cc_party_two_first_message_d_log_proof: Json<DLogProof<GE>>,
-) -> Result<Json<Party1SecondMessage<GE>>> {
+) -> Result<Json<Party1SecondMessage<GE>>, AnyhowError> {
     let user_id = &auth_payload.user_id;
 
     let cc_comm_witness: CommWitness<GE> =
@@ -302,24 +303,10 @@ pub fn chain_code_second_message(
 
     let party2_pub = &cc_party_two_first_message_d_log_proof.pk;
 
-    let master_key = chain_code_compute_message(&state, &auth_payload, id, party2_pub)?;
+    let master_key = chain_code_compute_message(state, &auth_payload, id, party2_pub)?;
 
     // Send mk#2 to HCMC
-    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
-
-    let update_mk_resp = post(&http_client, "/api/v1/storage/secret")
-        .bearer_auth(&auth_payload.token)
-        .json(&HcmcMasterKey {
-            master_key: &master_key,
-        })
-        .send()?;
-
-    if !update_mk_resp.status().is_success() {
-        return Err(anyhow!(
-            "Store user's master key {:#?} into vault failed!",
-            update_mk_resp.text()?
-        ));
-    }
+    send_store_mk_req(state, &auth_payload, &master_key).await?;
 
     Ok(Json(party1_cc))
 }
@@ -405,13 +392,13 @@ pub fn master_key(
     format = "json",
     data = "<eph_key_gen_first_message_party_two>"
 )]
-pub fn sign_first(
-    state: State<AppConfig>,
+pub async fn sign_first(
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     eph_key_gen_first_message_party_two: Json<party_two::EphKeyGenFirstMsg>,
-) -> Result<Json<party_one::EphKeyGenFirstMsg>> {
-    validate_auth_token(&state, &auth_payload)?;
+) -> Result<Json<party_one::EphKeyGenFirstMsg>, AnyhowError> {
+    validate_auth_token(state, &auth_payload).await?;
     let (sign_party_one_first_message, eph_ec_key_pair_party1) = MasterKey1::sign_first_message();
     let user_id = &auth_payload.user_id;
 
@@ -454,11 +441,11 @@ pub struct SignSecondMsgRequest {
 }
 #[post("/ecdsa/sign/<id>/second", format = "json", data = "<request>")]
 pub fn sign_second(
-    state: State<AppConfig>,
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     request: Json<SignSecondMsgRequest>,
-) -> Result<Json<party_one::SignatureRecid>> {
+) -> Result<Json<party_one::SignatureRecid>, AnyhowError> {
     let user_id = &auth_payload.user_id;
     let master_key: MasterKey1 =
         db::get(&state.db, user_id, &id, &EcdsaStruct::Party1MasterKey)?
@@ -508,10 +495,10 @@ pub fn get_mk(
 
 #[post("/ecdsa/rotate/<id>/first", format = "json")]
 pub fn rotate_first(
-    state: State<AppConfig>,
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>> {
+) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>, AnyhowError> {
     let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
     let user_id = &auth_payload.user_id;
     db::insert(
@@ -553,7 +540,7 @@ pub fn rotate_first(
     data = "<party2_first_message>"
 )]
 pub fn rotate_second(
-    state: State<AppConfig>,
+    state: &State<AppConfig>,
     id: String,
     auth_payload: AuthPayload,
     party2_first_message: Json<coin_flip_optimal_rounds::Party2FirstMessage<GE>>,
@@ -562,8 +549,9 @@ pub fn rotate_second(
         coin_flip_optimal_rounds::Party1SecondMessage<GE>,
         party1::RotationParty1Message1,
     )>,
+    AnyhowError,
 > {
-    let party_one_master_key = get_mk(&state, auth_payload.clone(), &id)?;
+    let party_one_master_key = get_mk(state, auth_payload.clone(), &id)?;
     let user_id = &auth_payload.user_id;
 
     let m1: Secp256k1Scalar =
@@ -629,26 +617,33 @@ pub fn rotate_second(
 
 #[post("/ecdsa/<id>/recover", format = "json")]
 pub fn recover(
-    state: State<AppConfig>,
+    state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-) -> Result<Json<u32>> {
+) -> Result<Json<u32>, AnyhowError> {
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
 }
 
-fn validate_auth_token(state: &State<AppConfig>, auth_payload: &AuthPayload) -> Result<()> {
+async fn send_store_mk_req(
+    state: &State<AppConfig>,
+    auth_payload: &AuthPayload,
+    master_key: &MasterKey1,
+) -> Result<()> {
     let http_client = HttpClient::new(state.hcmc.endpoint.clone());
 
-    let check_token_resp = get(&http_client, "/api/v1/storage/valid")
+    let update_mk_resp = post(&http_client, "/api/v1/storage/secret")
+        .await
         .bearer_auth(&auth_payload.token)
-        .send()?;
+        .json(&HcmcMasterKey { master_key })
+        .send()
+        .await?;
 
-    if !check_token_resp.status().is_success() {
+    if !update_mk_resp.status().is_success() {
         return Err(anyhow!(
-            "Failed to validate user's token {:#?}",
-            check_token_resp.text()?
+            "Store user's master key {:#?} into vault failed!",
+            update_mk_resp.text().await?
         ));
     }
 
