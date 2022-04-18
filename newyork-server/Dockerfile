@@ -25,4 +25,4 @@ COPY --from=builder /app/.env.staging .
 
 EXPOSE 8001
 
-CMD ["./server_exec"]
+CMD ["RUST_LOG=info ./server_exec"]
