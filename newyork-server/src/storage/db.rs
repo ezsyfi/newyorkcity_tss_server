@@ -28,6 +28,7 @@ where
             let identifier = idify(user_id, id, name);
             let v_string = serde_json::to_string(&v)?;
             rocksdb_client.put(identifier.as_bytes(), v_string.as_bytes())?;
+            info!("Insert {} of ({})", name.to_string(), identifier);
             Ok(())
         }
         DB::ConnError(msg) => {
@@ -43,7 +44,7 @@ where
     match db {
         DB::Local(rocksdb_client) => {
             let identifier = idify(user_id, id, name);
-            debug!("Getting from db ({})", identifier);
+            debug!("Get {} from db ({})", name.to_string(), identifier);
 
             let db_option = rocksdb_client.get(identifier.as_bytes())?;
             let vec_option: Option<Vec<u8>> = db_option.map(|v| v.to_vec());
