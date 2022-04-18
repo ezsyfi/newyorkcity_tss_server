@@ -87,4 +87,5 @@ jobs:
             docker pull ${{secrets.DOCKER_USER}}/$IMAGE_NAME
             cd $HOME && \
             docker network create --driver bridge tss_new || true && \
+            docker stop nyc || true && docker rm nyc || true && \
             docker run -d --rm --name nyc -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{secrets.DOCKER_USER}}/$IMAGE_NAME
