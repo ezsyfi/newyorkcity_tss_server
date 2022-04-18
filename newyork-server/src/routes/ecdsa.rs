@@ -1,4 +1,4 @@
-#![allow(non_snake_case)]
+// #![allow(non_snake_case)]
 
 use std::fmt::Debug;
 
@@ -104,12 +104,6 @@ pub async fn first_message(
         &EcdsaStruct::POS,
         &HDPos { pos: 0u32 }, // Initial HD position
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::POS,
-        user_id,
-        &id
-    );
 
     db::insert(
         &state.db,
@@ -118,12 +112,6 @@ pub async fn first_message(
         &EcdsaStruct::KeyGenFirstMsg,
         &key_gen_first_msg,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::KeyGenFirstMsg,
-        user_id,
-        &id
-    );
 
     db::insert(
         &state.db,
@@ -132,12 +120,6 @@ pub async fn first_message(
         &EcdsaStruct::CommWitness,
         &comm_witness,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::CommWitness,
-        user_id,
-        &id
-    );
 
     db::insert(
         &state.db,
@@ -146,12 +128,6 @@ pub async fn first_message(
         &EcdsaStruct::EcKeyPair,
         &ec_key_pair,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::EcKeyPair,
-        user_id,
-        &id
-    );
 
     Ok(Json((id, key_gen_first_msg)))
 }
@@ -173,12 +149,6 @@ pub fn second_message(
         &EcdsaStruct::Party2Public,
         &party2_public,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::Party2Public,
-        user_id,
-        &id
-    );
 
     let comm_witness: party_one::CommWitness =
         db::get(&state.db, user_id, &id, &EcdsaStruct::CommWitness)?
@@ -199,13 +169,6 @@ pub fn second_message(
         &paillier_key_pair,
     )?;
 
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::PaillierKeyPair,
-        user_id,
-        &id
-    );
-
     db::insert(
         &state.db,
         user_id,
@@ -213,13 +176,6 @@ pub fn second_message(
         &EcdsaStruct::Party1Private,
         &party_one_private,
     )?;
-
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::Party1Private,
-        user_id,
-        &id
-    );
 
     Ok(Json(kg_party_one_second_message))
 }
@@ -241,12 +197,6 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCKeyGenFirstMsg,
         &cc_party_one_first_message,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::CCKeyGenFirstMsg,
-        user_id,
-        &id
-    );
 
     db::insert(
         &state.db,
@@ -255,12 +205,6 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCCommWitness,
         &cc_comm_witness,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::CCCommWitness,
-        user_id,
-        &id
-    );
 
     db::insert(
         &state.db,
@@ -269,12 +213,6 @@ pub fn chain_code_first_message(
         &EcdsaStruct::CCEcKeyPair,
         &cc_ec_key_pair1,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::CCEcKeyPair,
-        user_id,
-        &id
-    );
 
     Ok(Json(cc_party_one_first_message))
 }
@@ -327,12 +265,6 @@ pub fn chain_code_compute_message(
     );
 
     db::insert(&state.db, user_id, &id, &EcdsaStruct::CC, &party1_cc)?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::CC,
-        user_id,
-        &id
-    );
 
     master_key(state, auth_payload, id)
 }
@@ -362,7 +294,7 @@ pub fn master_key(
         db::get(&state.db, user_id, &id, &EcdsaStruct::CommWitness)?
             .ok_or_else(|| anyhow!("No CommWitness for such userId {} - id {}", user_id, id))?;
 
-    let masterKey = MasterKey1::set_master_key(
+    let master_key = MasterKey1::set_master_key(
         &party1_cc.chain_code,
         party_one_private,
         &comm_witness.public_share,
@@ -375,16 +307,10 @@ pub fn master_key(
         user_id,
         &id,
         &EcdsaStruct::Party1MasterKey,
-        &masterKey,
+        &master_key,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::Party1MasterKey,
-        user_id,
-        &id
-    );
 
-    Ok(masterKey)
+    Ok(master_key)
 }
 
 #[post(
@@ -409,12 +335,7 @@ pub async fn sign_first(
         &EcdsaStruct::EphKeyGenFirstMsg,
         &eph_key_gen_first_message_party_two.0,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::EphKeyGenFirstMsg,
-        user_id,
-        &id
-    );
+
     db::insert(
         &state.db,
         user_id,
@@ -422,12 +343,7 @@ pub async fn sign_first(
         &EcdsaStruct::EphEcKeyPair,
         &eph_ec_key_pair_party1,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::EphEcKeyPair,
-        user_id,
-        &id
-    );
+
     Ok(Json(sign_party_one_first_message))
 }
 
@@ -483,11 +399,7 @@ pub fn sign_second(
     Ok(Json(signature_with_recid.unwrap()))
 }
 
-pub fn get_mk(
-    state: &State<AppConfig>,
-    auth_payload: AuthPayload,
-    id: &String,
-) -> Result<MasterKey1> {
+pub fn get_mk(state: &State<AppConfig>, auth_payload: AuthPayload, id: &str) -> Result<MasterKey1> {
     let user_id = &auth_payload.user_id;
     db::get(&state.db, user_id, id, &EcdsaStruct::Party1MasterKey)?
         .ok_or_else(|| anyhow!("No Party1MasterKey for such userId {} - id {}", user_id, id))
@@ -509,13 +421,6 @@ pub fn rotate_first(
         &m1,
     )?;
 
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::RotateCommitMessage1M,
-        user_id,
-        &id
-    );
-
     db::insert(
         &state.db,
         user_id,
@@ -523,13 +428,6 @@ pub fn rotate_first(
         &EcdsaStruct::RotateCommitMessage1R,
         &r1,
     )?;
-
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::RotateCommitMessage1R,
-        user_id,
-        &id
-    );
 
     Ok(Json(party1_coin_flip_first_message))
 }
@@ -585,12 +483,6 @@ pub fn rotate_second(
         &EcdsaStruct::RotateRandom1,
         &random1,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::RotateRandom1,
-        user_id,
-        &id
-    );
 
     let (rotation_party_one_first_message, party_one_master_key_rotated) =
         party_one_master_key.rotation_first_message(&random1);
@@ -602,12 +494,6 @@ pub fn rotate_second(
         &EcdsaStruct::Party1MasterKey,
         &party_one_master_key_rotated,
     )?;
-    info!(
-        "Insert {:#?} of userId {} - id {}",
-        &EcdsaStruct::Party1MasterKey,
-        user_id,
-        &id
-    );
 
     Ok(Json((
         party1_second_message,
