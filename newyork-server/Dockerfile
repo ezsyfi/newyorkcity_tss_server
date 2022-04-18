@@ -24,5 +24,5 @@ COPY --from=builder /app/Rocket.toml .
 COPY --from=builder /app/.env.staging .
 
 EXPOSE 8001
-
-CMD ["RUST_LOG=info ./server_exec"]
+ENV RUST_LOG=info
+CMD ["./server_exec"]
