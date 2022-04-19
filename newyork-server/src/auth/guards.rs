@@ -29,7 +29,7 @@ impl<'r> FromRequest<'r> for AuthPayload {
         }
 
         let token = header_parts.next().unwrap_or("");
-        let user_id: &str = request.headers().get_one("user-id").unwrap_or("");
+        let user_id: &str = request.headers().get_one("user_id").unwrap_or("");
 
         debug!("Auth token - user id: {} - {}", token, user_id);
 
