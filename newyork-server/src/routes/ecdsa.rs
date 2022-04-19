@@ -393,7 +393,7 @@ pub fn sign_second(
     );
 
     if signature_with_recid.is_err() {
-        panic!("validation failed")
+        error!("Signature validation failed")
     };
 
     Ok(Json(signature_with_recid.unwrap()))
