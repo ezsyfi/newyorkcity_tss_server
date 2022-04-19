@@ -50,13 +50,6 @@ pub fn get_server() -> _ {
                 ecdsa::recover,
                 eth::tx_parameters,
                 eth::tx_send,
-                // schnorr::keygen_first,
-                // schnorr::keygen_second,
-                // schnorr::keygen_third,
-                // schnorr::sign,
-                // eddsa::keygen,
-                // eddsa::sign_first,
-                // eddsa::sign_second,
             ],
         )
         .manage(app_config)
@@ -65,7 +58,7 @@ pub fn get_server() -> _ {
 fn get_db() -> db::DB {
     match rocksdb::DB::open_default("./db") {
         Ok(db) => {
-            print!("Init RocksDB connection successfully");
+            info!("Init RocksDB connection successfully");
             db::DB::Local(db)
         }
         Err(e) => {
