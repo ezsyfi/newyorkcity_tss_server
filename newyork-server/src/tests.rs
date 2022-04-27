@@ -5,6 +5,9 @@ mod test_suites {
 
     use super::super::routes::ecdsa;
     use super::super::server;
+    use kms::chain_code::two_party::party2::ChainCode2;
+    use kms::ecdsa::two_party::MasterKey2;
+    use kms::ecdsa::two_party::party1::KeyGenParty1Message2;
     use rocket;
     use rocket::http::ContentType;
     use rocket::http::Header;
@@ -12,17 +15,26 @@ mod test_suites {
     use rocket::local::blocking::Client;
     use serde_json;
     use serde_json::json;
+    use two_party_ecdsa::BigInt;
+    use two_party_ecdsa::party_one;
+    use two_party_ecdsa::curv::cryptographic_primitives::{
+        twoparty::dh_key_exchange_variant_with_pok_comm::{
+            Party1FirstMessage, Party1SecondMessage,
+        },
+    };
+    use two_party_ecdsa::party_one::Converter;
+    use two_party_ecdsa::party_two;
     use std::time::Instant;
-    use zk_paillier::zkproofs::SALT_STRING;
+    // use zk_paillier::zkproofs::SALT_STRING;
 
-    use curv::arithmetic::traits::Converter;
-    use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
-    use curv::elliptic::curves::secp256_k1::GE;
-    use curv::BigInt;
+    // use curv::arithmetic::traits::Converter;
+    // use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
+    // use curv::elliptic::curves::secp256_k1::GE;
+    // use curv::BigInt;
     use floating_duration::TimeFormat;
-    use kms::chain_code::two_party as chain_code;
-    use kms::ecdsa::two_party::*;
-    use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
+    // use kms::chain_code::two_party as chain_code;
+    // use kms::ecdsa::two_party::*;
+    // use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
 
     #[derive(Debug, Deserialize)]
     #[allow(dead_code, non_snake_case)]
@@ -89,7 +101,7 @@ mod test_suites {
         );
 
         let res_body = response.into_string().unwrap();
-        let kg_party_one_second_message: party1::KeyGenParty1Message2 =
+        let kg_party_one_second_message: KeyGenParty1Message2 =
             serde_json::from_str(&res_body).unwrap();
 
         let start = Instant::now();
@@ -97,7 +109,7 @@ mod test_suites {
         let key_gen_second_message = MasterKey2::key_gen_second_message(
             &kg_party_one_first_message,
             &kg_party_one_second_message,
-            SALT_STRING,
+            // SALT_STRING,
         );
         assert!(key_gen_second_message.is_ok());
 
@@ -106,7 +118,7 @@ mod test_suites {
             TimeFormat(start.elapsed())
         );
 
-        let (_party_two_second_message, party_two_paillier) = key_gen_second_message.unwrap();
+        let party_two_paillier = key_gen_second_message.unwrap();
 
         /*************** END: SECOND MESSAGE ***************/
 
@@ -131,8 +143,7 @@ mod test_suites {
             serde_json::from_str(&res_body).unwrap();
 
         let start = Instant::now();
-        let (cc_party_two_first_message, cc_ec_key_pair2) =
-            chain_code::party2::ChainCode2::chain_code_first_message();
+        let (cc_party_two_first_message, cc_ec_key_pair2) = ChainCode2::chain_code_first_message();
 
         println!(
             "{} Client: party2 chain code first message",
@@ -160,15 +171,14 @@ mod test_suites {
         );
 
         let res_body = response.into_string().unwrap();
-        let cc_party_one_second_message: Party1SecondMessage<GE> =
+        let cc_party_one_second_message: Party1SecondMessage =
             serde_json::from_str(&res_body).unwrap();
 
         let start = Instant::now();
-        let _cc_party_two_second_message =
-            chain_code::party2::ChainCode2::chain_code_second_message(
-                &cc_party_one_first_message,
-                &cc_party_one_second_message,
-            );
+        let _cc_party_two_second_message = ChainCode2::chain_code_second_message(
+            &cc_party_one_first_message,
+            &cc_party_one_second_message,
+        );
 
         println!(
             "{} Client: party2 chain code second message",
@@ -177,7 +187,7 @@ mod test_suites {
         /*************** END: CHAINCODE SECOND MESSAGE ***************/
 
         let start = Instant::now();
-        let party2_cc = chain_code::party2::ChainCode2::compute_chain_code(
+        let party2_cc = ChainCode2::compute_chain_code(
             &cc_ec_key_pair2,
             &cc_party_one_second_message.comm_witness.public_share,
         )
@@ -323,7 +333,7 @@ mod test_suites {
         let (id, master_key_2): (String, MasterKey2) =
             key_gen(&client, auth_header.clone(), user_id_header.clone());
 
-        let message = BigInt::from(1234);
+        let message = BigInt::from_hex("1234");
 
         let signature: party_one::SignatureRecid = sign(
             &client,
