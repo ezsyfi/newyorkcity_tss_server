@@ -6,18 +6,28 @@ use crate::utils::requests::{post, validate_auth_token, HttpClient};
 use crate::AnyhowError;
 
 use anyhow::{anyhow, Result};
-use curv::cryptographic_primitives::proofs::sigma_dlog::*;
-use curv::cryptographic_primitives::twoparty::coin_flip_optimal_rounds;
-use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::{
-    CommWitness, EcKeyPair, Party1FirstMessage, Party1SecondMessage,
+use kms::chain_code::two_party::party1::ChainCode1;
+use kms::ecdsa::two_party::party2::SignMessage;
+use kms::ecdsa::two_party::{party1, MasterKey1};
+use two_party_ecdsa::curv::cryptographic_primitives::{
+    proofs::sigma_dlog::DLogProof,
+    twoparty::dh_key_exchange_variant_with_pok_comm::{
+        CommWitness, EcKeyPair, Party1FirstMessage, Party1SecondMessage,
+    },
 };
-use curv::elliptic::curves::secp256_k1::Secp256k1Scalar;
-use curv::elliptic::curves::secp256_k1::GE;
-use curv::BigInt;
-use kms::chain_code::two_party as chain_code;
-use kms::ecdsa::two_party::*;
-use kms::rotation::two_party::party1::Rotation1;
-use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
+use two_party_ecdsa::{party_one, party_two, BigInt, GE};
+// use curv::cryptographic_primitives::proofs::sigma_dlog::*;
+// use curv::cryptographic_primitives::twoparty::coin_flip_optimal_rounds;
+// use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::{
+//     CommWitness, EcKeyPair, Party1FirstMessage, Party1SecondMessage,
+// };
+// use curv::elliptic::curves::secp256_k1::Secp256k1Scalar;
+// use curv::elliptic::curves::secp256_k1::GE;
+// use curv::BigInt;
+// use kms::chain_code::two_party as chain_code;
+// use kms::ecdsa::two_party::*;
+// use kms::rotation::two_party::party1::Rotation1;
+// use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
 use rocket::serde::json::Json;
 use rocket::State;
 use uuid::Uuid;
@@ -137,7 +147,7 @@ pub fn second_message(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-    dlog_proof: Json<DLogProof<GE>>,
+    dlog_proof: Json<DLogProof>,
 ) -> Result<Json<party1::KeyGenParty1Message2>, AnyhowError> {
     let party2_public: GE = dlog_proof.0.pk;
     let user_id = &auth_payload.user_id;
@@ -187,7 +197,7 @@ pub fn chain_code_first_message(
     id: String,
 ) -> Result<Json<Party1FirstMessage>, AnyhowError> {
     let (cc_party_one_first_message, cc_comm_witness, cc_ec_key_pair1) =
-        chain_code::party1::ChainCode1::chain_code_first_message();
+        ChainCode1::chain_code_first_message();
     let user_id = &auth_payload.user_id;
 
     db::insert(
@@ -226,15 +236,15 @@ pub async fn chain_code_second_message(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
-    cc_party_two_first_message_d_log_proof: Json<DLogProof<GE>>,
-) -> Result<Json<Party1SecondMessage<GE>>, AnyhowError> {
+    cc_party_two_first_message_d_log_proof: Json<DLogProof>,
+) -> Result<Json<Party1SecondMessage>, AnyhowError> {
     let user_id = &auth_payload.user_id;
 
-    let cc_comm_witness: CommWitness<GE> =
+    let cc_comm_witness: CommWitness =
         db::get(&state.db, user_id, &id, &EcdsaStruct::CCCommWitness)?
             .ok_or_else(|| anyhow!("No CCCommWitness for such userId {} - id {}", user_id, id))?;
 
-    let party1_cc = chain_code::party1::ChainCode1::chain_code_second_message(
+    let party1_cc = ChainCode1::chain_code_second_message(
         cc_comm_witness,
         &cc_party_two_first_message_d_log_proof.0,
     );
@@ -256,13 +266,10 @@ pub fn chain_code_compute_message(
     cc_party2_public: &GE,
 ) -> Result<MasterKey1> {
     let user_id = &auth_payload.user_id;
-    let cc_ec_key_pair_party1: EcKeyPair<GE> =
+    let cc_ec_key_pair_party1: EcKeyPair =
         db::get(&state.db, user_id, &id, &EcdsaStruct::CCEcKeyPair)?
             .ok_or_else(|| anyhow!("No CCEcKeyPair for such userId {} - id {}", user_id, id))?;
-    let party1_cc = chain_code::party1::ChainCode1::compute_chain_code(
-        &cc_ec_key_pair_party1,
-        cc_party2_public,
-    );
+    let party1_cc = ChainCode1::compute_chain_code(&cc_ec_key_pair_party1, cc_party2_public);
 
     db::insert(&state.db, user_id, &id, &EcdsaStruct::CC, &party1_cc)?;
 
@@ -282,9 +289,8 @@ pub fn master_key(
         db::get(&state.db, user_id, &id, &EcdsaStruct::PaillierKeyPair)?
             .ok_or_else(|| anyhow!("No PaillierKeyPair for such userId {} - id {}", user_id, id))?;
 
-    let party1_cc: chain_code::party1::ChainCode1 =
-        db::get(&state.db, user_id, &id, &EcdsaStruct::CC)?
-            .ok_or_else(|| anyhow!("No CC for such userId {} - id {}", user_id, id))?;
+    let party1_cc: ChainCode1 = db::get(&state.db, user_id, &id, &EcdsaStruct::CC)?
+        .ok_or_else(|| anyhow!("No CC for such userId {} - id {}", user_id, id))?;
 
     let party_one_private: party_one::Party1Private =
         db::get(&state.db, user_id, &id, &EcdsaStruct::Party1Private)?
@@ -351,7 +357,7 @@ pub async fn sign_first(
 #[derive(Serialize, Deserialize)]
 pub struct SignSecondMsgRequest {
     pub message: BigInt,
-    pub party_two_sign_message: party2::SignMessage,
+    pub party_two_sign_message: SignMessage,
     pub x_pos_child_key: BigInt,
     pub y_pos_child_key: BigInt,
 }
@@ -405,112 +411,112 @@ pub fn get_mk(state: &State<AppConfig>, auth_payload: AuthPayload, id: &str) -> 
         .ok_or_else(|| anyhow!("No Party1MasterKey for such userId {} - id {}", user_id, id))
 }
 
-#[post("/ecdsa/rotate/<id>/first", format = "json")]
-pub fn rotate_first(
-    state: &State<AppConfig>,
-    auth_payload: AuthPayload,
-    id: String,
-) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>, AnyhowError> {
-    let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
-    let user_id = &auth_payload.user_id;
-    db::insert(
-        &state.db,
-        user_id,
-        &id,
-        &EcdsaStruct::RotateCommitMessage1M,
-        &m1,
-    )?;
+// #[post("/ecdsa/rotate/<id>/first", format = "json")]
+// pub fn rotate_first(
+//     state: &State<AppConfig>,
+//     auth_payload: AuthPayload,
+//     id: String,
+// ) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>, AnyhowError> {
+//     let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
+//     let user_id = &auth_payload.user_id;
+//     db::insert(
+//         &state.db,
+//         user_id,
+//         &id,
+//         &EcdsaStruct::RotateCommitMessage1M,
+//         &m1,
+//     )?;
 
-    db::insert(
-        &state.db,
-        user_id,
-        &id,
-        &EcdsaStruct::RotateCommitMessage1R,
-        &r1,
-    )?;
+//     db::insert(
+//         &state.db,
+//         user_id,
+//         &id,
+//         &EcdsaStruct::RotateCommitMessage1R,
+//         &r1,
+//     )?;
 
-    Ok(Json(party1_coin_flip_first_message))
-}
+//     Ok(Json(party1_coin_flip_first_message))
+// }
 
-#[post(
-    "/ecdsa/rotate/<id>/second",
-    format = "json",
-    data = "<party2_first_message>"
-)]
-pub fn rotate_second(
-    state: &State<AppConfig>,
-    id: String,
-    auth_payload: AuthPayload,
-    party2_first_message: Json<coin_flip_optimal_rounds::Party2FirstMessage<GE>>,
-) -> Result<
-    Json<(
-        coin_flip_optimal_rounds::Party1SecondMessage<GE>,
-        party1::RotationParty1Message1,
-    )>,
-    AnyhowError,
-> {
-    let party_one_master_key = get_mk(state, auth_payload.clone(), &id)?;
-    let user_id = &auth_payload.user_id;
+// #[post(
+//     "/ecdsa/rotate/<id>/second",
+//     format = "json",
+//     data = "<party2_first_message>"
+// )]
+// pub fn rotate_second(
+//     state: &State<AppConfig>,
+//     id: String,
+//     auth_payload: AuthPayload,
+//     party2_first_message: Json<coin_flip_optimal_rounds::Party2FirstMessage<GE>>,
+// ) -> Result<
+//     Json<(
+//         coin_flip_optimal_rounds::Party1SecondMessage<GE>,
+//         party1::RotationParty1Message1,
+//     )>,
+//     AnyhowError,
+// > {
+//     let party_one_master_key = get_mk(state, auth_payload.clone(), &id)?;
+//     let user_id = &auth_payload.user_id;
 
-    let m1: Secp256k1Scalar =
-        db::get(&state.db, user_id, &id, &EcdsaStruct::RotateCommitMessage1M)?.ok_or_else(
-            || {
-                anyhow!(
-                    "No RotateCommitMessage1M for such userId {} - id {}",
-                    user_id,
-                    id
-                )
-            },
-        )?;
+//     let m1: Secp256k1Scalar =
+//         db::get(&state.db, user_id, &id, &EcdsaStruct::RotateCommitMessage1M)?.ok_or_else(
+//             || {
+//                 anyhow!(
+//                     "No RotateCommitMessage1M for such userId {} - id {}",
+//                     user_id,
+//                     id
+//                 )
+//             },
+//         )?;
 
-    let r1: Secp256k1Scalar =
-        db::get(&state.db, user_id, &id, &EcdsaStruct::RotateCommitMessage1R)?.ok_or_else(
-            || {
-                anyhow!(
-                    "No RotateCommitMessage1R for such userId {} - id {}",
-                    user_id,
-                    id
-                )
-            },
-        )?;
+//     let r1: Secp256k1Scalar =
+//         db::get(&state.db, user_id, &id, &EcdsaStruct::RotateCommitMessage1R)?.ok_or_else(
+//             || {
+//                 anyhow!(
+//                     "No RotateCommitMessage1R for such userId {} - id {}",
+//                     user_id,
+//                     id
+//                 )
+//             },
+//         )?;
 
-    let (party1_second_message, random1) =
-        Rotation1::key_rotate_second_message(&party2_first_message.0, &m1, &r1);
-    db::insert(
-        &state.db,
-        user_id,
-        &id,
-        &EcdsaStruct::RotateRandom1,
-        &random1,
-    )?;
+//     let (party1_second_message, random1) =
+//         Rotation1::key_rotate_second_message(&party2_first_message.0, &m1, &r1);
+//     db::insert(
+//         &state.db,
+//         user_id,
+//         &id,
+//         &EcdsaStruct::RotateRandom1,
+//         &random1,
+//     )?;
 
-    let (rotation_party_one_first_message, party_one_master_key_rotated) =
-        party_one_master_key.rotation_first_message(&random1);
+//     let (rotation_party_one_first_message, party_one_master_key_rotated) =
+//         party_one_master_key.rotation_first_message(&random1);
 
-    db::insert(
-        &state.db,
-        user_id,
-        &id,
-        &EcdsaStruct::Party1MasterKey,
-        &party_one_master_key_rotated,
-    )?;
+//     db::insert(
+//         &state.db,
+//         user_id,
+//         &id,
+//         &EcdsaStruct::Party1MasterKey,
+//         &party_one_master_key_rotated,
+//     )?;
 
-    Ok(Json((
-        party1_second_message,
-        rotation_party_one_first_message,
-    )))
-}
+//     Ok(Json((
+//         party1_second_message,
+//         rotation_party_one_first_message,
+//     )))
+// }
 
-#[post("/ecdsa/<id>/recover", format = "json")]
-pub fn recover(
-    state: &State<AppConfig>,
-    auth_payload: AuthPayload,
-    id: String,
-) -> Result<Json<u32>, AnyhowError> {
-    let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
-        .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
-    Ok(Json(pos_old))
-}
+// #[post("/ecdsa/<id>/recover", format = "json")]
+// pub fn recover(
+//     state: &State<AppConfig>,
+//     auth_payload: AuthPayload,
+//     id: String,
+// ) -> Result<Json<u32>, AnyhowError> {
+//     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
+//         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
+//     Ok(Json(pos_old))
+// }
 
 async fn send_store_mk_req(
     state: &State<AppConfig>,
