@@ -517,7 +517,7 @@ async fn send_store_mk_req(
     auth_payload: &AuthPayload,
     master_key: &MasterKey1,
 ) -> Result<()> {
-    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
+    let http_client = HttpClient::new(state.hcmc_api.clone());
 
     let update_mk_resp = post(&http_client, "/api/v1/storage/secret")
         .await
