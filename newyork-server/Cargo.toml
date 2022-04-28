@@ -36,6 +36,7 @@ envy = "0.4.2"
 web3 = "0.18.0"
 futures = "0.3"
 two-party-ecdsa = { git = "https://github.com/ZenGo-X/two-party-ecdsa.git" }
+ethers = "0.5"
 
 [dependencies.kms]
 git = "https://github.com/KZen-networks/kms-secp256k1"
