@@ -9,6 +9,8 @@ use anyhow::{anyhow, Result};
 use kms::chain_code::two_party::party1::ChainCode1;
 use kms::ecdsa::two_party::party2::SignMessage;
 use kms::ecdsa::two_party::{party1, MasterKey1};
+use rocket::serde::json::Json;
+use rocket::State;
 use two_party_ecdsa::curv::cryptographic_primitives::{
     proofs::sigma_dlog::DLogProof,
     twoparty::dh_key_exchange_variant_with_pok_comm::{
@@ -16,20 +18,6 @@ use two_party_ecdsa::curv::cryptographic_primitives::{
     },
 };
 use two_party_ecdsa::{party_one, party_two, BigInt, GE};
-// use curv::cryptographic_primitives::proofs::sigma_dlog::*;
-// use curv::cryptographic_primitives::twoparty::coin_flip_optimal_rounds;
-// use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::{
-//     CommWitness, EcKeyPair, Party1FirstMessage, Party1SecondMessage,
-// };
-// use curv::elliptic::curves::secp256_k1::Secp256k1Scalar;
-// use curv::elliptic::curves::secp256_k1::GE;
-// use curv::BigInt;
-// use kms::chain_code::two_party as chain_code;
-// use kms::ecdsa::two_party::*;
-// use kms::rotation::two_party::party1::Rotation1;
-// use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
-use rocket::serde::json::Json;
-use rocket::State;
 use uuid::Uuid;
 
 use super::super::auth::guards::AuthPayload;

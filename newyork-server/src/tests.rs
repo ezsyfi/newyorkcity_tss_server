@@ -25,16 +25,7 @@ mod test_suites {
     use two_party_ecdsa::party_one::Converter;
     use two_party_ecdsa::party_two;
     use std::time::Instant;
-    // use zk_paillier::zkproofs::SALT_STRING;
-
-    // use curv::arithmetic::traits::Converter;
-    // use curv::cryptographic_primitives::twoparty::dh_key_exchange_variant_with_pok_comm::*;
-    // use curv::elliptic::curves::secp256_k1::GE;
-    // use curv::BigInt;
     use floating_duration::TimeFormat;
-    // use kms::chain_code::two_party as chain_code;
-    // use kms::ecdsa::two_party::*;
-    // use multi_party_ecdsa::protocols::two_party_ecdsa::lindell_2017::*;
 
     #[derive(Debug, Deserialize)]
     #[allow(dead_code, non_snake_case)]
