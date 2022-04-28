@@ -40,7 +40,6 @@ jobs:
           cd ./newyork-server
           touch .env.staging
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
-          echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
           echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
 
           touch .env.test
@@ -68,7 +67,6 @@ jobs:
 
           touch .env.staging
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
-          echo HCMC_PORT=${{secrets.HCMC_PORT}} >> .env.staging
           echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
           
           docker build -t $IMAGE_NAME .

@@ -1,13 +1,8 @@
 use anyhow::Result;
 
-pub struct HcmcConfig {
-    pub endpoint: String,
-}
-
 #[derive(Deserialize, Debug)]
 pub struct AppEnv {
     pub hcmc_host: String,
-    pub hcmc_port: String,
     pub alchemy_api: String,
 }
 
@@ -32,10 +27,4 @@ pub fn get_test_env(file_name: &str) -> TestEnv {
         Ok(config) => config,
         Err(e) => panic!("Couldn't read env config ({})", e),
     }
-}
-
-pub fn get_hcmc_host(env_configs: &AppEnv) -> Result<HcmcConfig> {
-    Ok(HcmcConfig {
-        endpoint: format!("{}:{}", env_configs.hcmc_host, env_configs.hcmc_port),
-    })
 }

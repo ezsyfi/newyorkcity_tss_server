@@ -21,7 +21,7 @@ pub mod utils;
 
 pub struct AppConfig {
     pub db: storage::db::DB,
-    pub hcmc: utils::settings::HcmcConfig,
+    pub hcmc_api: String,
     pub alchemy_api: String,
 }
 

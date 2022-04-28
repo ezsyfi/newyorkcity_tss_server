@@ -30,7 +30,7 @@ pub async fn validate_auth_token(
     state: &State<AppConfig>,
     auth_payload: &AuthPayload,
 ) -> Result<()> {
-    let http_client = HttpClient::new(state.hcmc.endpoint.clone());
+    let http_client = HttpClient::new(state.hcmc_api.clone());
 
     let check_token_resp = get(&http_client, "/api/v1/storage/valid")
         .await
