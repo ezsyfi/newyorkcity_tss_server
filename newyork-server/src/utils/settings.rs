@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 #[derive(Deserialize, Debug)]
 pub struct AppEnv {
     pub hcmc_host: String,
