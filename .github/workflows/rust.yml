@@ -4,8 +4,6 @@ on:
   pull_request:
     branches: [dev]
     types: [opened, closed]
-  workflow_dispatch:
-    branches: [dev]
 
 env:
   CARGO_TERM_COLOR: always
@@ -52,7 +50,7 @@ jobs:
     needs: build
     if: ${{ github.event.pull_request.merged }}
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
       - name: Docker Login
@@ -60,7 +58,7 @@ jobs:
           DOCKER_USER: ${{secrets.DOCKER_USER}}
           DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
         run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-      
+
       - name: Docker build
         run: |
           cd ./newyork-server
@@ -68,7 +66,7 @@ jobs:
           touch .env.staging
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
           echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
-          
+
           docker build -t $IMAGE_NAME .
           docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
           docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
