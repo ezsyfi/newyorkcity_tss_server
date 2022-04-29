@@ -4,8 +4,7 @@ COPY . .
 ARG DEBIAN_FRONTEND=noninteractive
 RUN rustup component add rustfmt
 
-RUN apt-get clean
-RUN apt-get update
+RUN apt-get clean & apt-get update
 RUN apt-get -y install build-essential pkg-config libssl-dev
 RUN apt-get install -y libclang-dev llvm clang
 RUN apt-get -y install libgmp3-dev
@@ -16,7 +15,9 @@ FROM ubuntu:20.04
 WORKDIR /app
 
 # Install <extra-runtime-dependencies>
-RUN apt-get update && apt-get install -y libclang-dev && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get clean & apt-get update
+RUN apt-get install -y libclang-dev && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y ca-certificates
 
 # Copy bin & config files
 COPY --from=builder /app/target/release .
