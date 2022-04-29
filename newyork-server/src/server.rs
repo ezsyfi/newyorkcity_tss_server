@@ -46,7 +46,7 @@ pub fn get_server() -> _ {
                 ecdsa::sign_second,
                 // ecdsa::rotate_first,
                 // ecdsa::rotate_second,
-                // ecdsa::recover,
+                ecdsa::recover,
                 eth::tx_parameters,
                 eth::tx_send,
             ],

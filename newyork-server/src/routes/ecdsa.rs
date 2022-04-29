@@ -495,16 +495,17 @@ pub fn get_mk(state: &State<AppConfig>, auth_payload: AuthPayload, id: &str) -> 
 //     )))
 // }
 
-// #[post("/ecdsa/<id>/recover", format = "json")]
-// pub fn recover(
-//     state: &State<AppConfig>,
-//     auth_payload: AuthPayload,
-//     id: String,
-// ) -> Result<Json<u32>, AnyhowError> {
-//     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
-//         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
-//     Ok(Json(pos_old))
-// }
+#[post("/ecdsa/<id>/recover", format = "json")]
+pub fn recover(
+    state: &State<AppConfig>,
+    auth_payload: AuthPayload,
+    id: String,
+) -> Result<Json<u32>, AnyhowError> {
+    let pos_old: HDPos = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
+        .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
+
+    Ok(Json(pos_old.pos))
+}
 
 async fn send_store_mk_req(
     state: &State<AppConfig>,
