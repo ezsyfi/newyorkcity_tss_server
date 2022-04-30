@@ -15,9 +15,11 @@ FROM ubuntu:20.04
 WORKDIR /app
 
 # Install <extra-runtime-dependencies>
-RUN apt-get clean & apt-get update
-RUN apt-get install -y libclang-dev && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
-RUN apt-get install -y ca-certificates
+RUN apt clean && apt update \
+    && apt install -y ca-certificates \
+    && apt install -y libclang-dev \
+    && apt install -y libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy bin & config files
 COPY --from=builder /app/target/release .
