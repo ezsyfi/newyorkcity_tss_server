@@ -40,20 +40,19 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          # TODO: Undo when vault API is fixed
-      # - name: Test
-      #   run: |
-      #     cd ./newyork-server
-      #     touch .env.staging
-      #     echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
-      #     echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
+      - name: Test
+        run: |
+          cd ./newyork-server
+          touch .env.staging
+          echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
+          echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
 
-      #     touch .env.test
-      #     echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
-      #     echo TEST_PASS=${{secrets.TEST_PASS}} >> .env.test
-      #     echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> .env.test
-      #     cargo fmt
-      #     cargo test --verbose
+          touch .env.test
+          echo TEST_EMAIL=${{secrets.TEST_EMAIL}} >> .env.test
+          echo TEST_PASS=${{secrets.TEST_PASS}} >> .env.test
+          echo TEST_SIGNIN_URL=${{secrets.TEST_SIGNIN_URL}} >> .env.test
+          cargo fmt
+          cargo test --verbose
   build-deploy:
     runs-on: ubuntu-latest
 
