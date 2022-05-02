@@ -8,16 +8,16 @@ on:
     tags:
       - "v*"
   pull_request:
-    branches: [dev]
-    types: [opened, closed]
+    branches:
+      - "dev"
 
 env:
   REGISTRY: ghcr.io
   CARGO_TERM_COLOR: always
-  IMAGE_NAME: newyork_city
+  IMAGE_NAME: ${{ github.repository }}
 jobs:
   test:
-    if: ${{ github.event.action }} == 'opened'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     strategy:
@@ -55,8 +55,6 @@ jobs:
       #     cargo fmt
       #     cargo test --verbose
   build-deploy:
-    needs: test
-    if: ${{ github.event.pull_request.merged }}
     runs-on: ubuntu-latest
 
     steps:
@@ -78,8 +76,9 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+
       - name: Log in to the Container registry
-        if: ${{ github.event.pull_request.merged }}
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -90,11 +89,12 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: ./newyork-server
-          push: ${{ github.event.pull_request.merged }}
+          push:  ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Docker deploy
+        if: github.event_name != 'pull_request'
         uses: appleboy/ssh-action@master
         with:
           host: ${{secrets.EC2_HOST}}
@@ -102,10 +102,11 @@ jobs:
           key: ${{secrets.EC2_SSH_KEY}}
           envs: IMAGE_NAME
           script: |
-            export CR_PAT=YOUR_TOKEN
-            echo $CR_PAT | docker login ${{ env.REGISTRY }} -u ${{ github.repository }} --password-stdin 
-            docker pull ${{ env.REGISTRY }}/${{ github.repository }}/$IMAGE_NAME
+            export CR_PAT=${{ secrets.GITHUB_TOKEN }}
+            echo $CR_PAT | docker login ${{ env.REGISTRY }} -u ${{ github.repository }} --password-stdin
+            echo ${{ steps.meta.outputs.tags }}
+            docker pull ${{ steps.meta.outputs.tags }}
             cd $HOME && \
             docker network create --driver bridge tss_new || true && \
             docker stop nyc || true && docker rm nyc || true && \
-            docker run -d --rm --name nyc --ip ${{secrets.NYC_CONTAINER_IP}} -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+            docker run -d --rm --name nyc --ip ${{secrets.NYC_CONTAINER_IP}} -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{ steps.meta.outputs.tags }}
