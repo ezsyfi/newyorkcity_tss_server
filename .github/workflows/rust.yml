@@ -1,11 +1,18 @@
-name: Cargo Build & Test
+name: CI/CD newyork-server
 
 on:
+  push:
+    branches:
+      - "main"
+      - "dev"
+    tags:
+      - "v*"
   pull_request:
     branches: [dev]
     types: [opened, closed]
 
 env:
+  REGISTRY: ghcr.io
   CARGO_TERM_COLOR: always
   IMAGE_NAME: newyork_city
 jobs:
@@ -53,23 +60,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Docker Login
-        env:
-          DOCKER_USER: ${{secrets.DOCKER_USER}}
-          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-        run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-
-      - name: Docker build
         run: |
           cd ./newyork-server
-
           touch .env.staging
           echo HCMC_HOST=${{secrets.HCMC_HOST}} >> .env.staging
           echo ALCHEMY_API=${{secrets.ALCHEMY_API}} >> .env.staging
 
-          docker build -t $IMAGE_NAME .
-          docker tag $IMAGE_NAME:latest ${{secrets.DOCKER_USER}}/$IMAGE_NAME:latest
-          docker push ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Log in to the Container registry
+        if: ${{ github.event.pull_request.merged }}
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: ./newyork-server
+          push: ${{ github.event.pull_request.merged }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
       - name: Docker deploy
         uses: appleboy/ssh-action@master
@@ -79,8 +100,9 @@ jobs:
           key: ${{secrets.EC2_SSH_KEY}}
           envs: IMAGE_NAME
           script: |
-            docker login 
-            docker pull ${{secrets.DOCKER_USER}}/$IMAGE_NAME
+            export CR_PAT=YOUR_TOKEN
+            echo $CR_PAT | docker login ${{ env.REGISTRY }} -u ${{ github.repository }} --password-stdin 
+            docker pull ${{ env.REGISTRY }}/${{ github.repository }}/$IMAGE_NAME
             cd $HOME && \
             docker network create --driver bridge tss_new || true && \
             docker stop nyc || true && docker rm nyc || true && \
