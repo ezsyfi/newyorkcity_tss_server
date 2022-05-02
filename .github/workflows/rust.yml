@@ -60,6 +60,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Create env file
         run: |
           cd ./newyork-server
           touch .env.staging
