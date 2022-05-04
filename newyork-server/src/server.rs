@@ -2,7 +2,7 @@ use rocket;
 use rocket::Request;
 use rocksdb;
 
-use crate::utils::settings::get_app_env;
+use crate::utils::settings::{get_app_env, AppEnv};
 
 use super::routes::*;
 use super::storage::db;
@@ -25,7 +25,7 @@ fn not_found(req: &Request) -> String {
 
 #[launch]
 pub fn get_server() -> _ {
-    let env_configs = get_app_env(".env.staging");
+    let env_configs = get_app_env::<AppEnv>(".env.staging");
     let app_config = AppConfig {
         db: get_db(),
         hcmc_api: env_configs.hcmc_host,
