@@ -16,7 +16,6 @@ version = "0.5.0-rc.1"
 features = ["json"]
 
 [dependencies]
-# rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["tera"] }
 rocksdb = "0.18.0"
 serde = "1.0"
 serde_json = "1.0"
@@ -49,21 +48,3 @@ tag = "v0.3.1"
 [dependencies.multi-party-ecdsa]
 git = "https://github.com/KZen-networks/multi-party-ecdsa"
 tag = "v0.4.6"
-
-# [dependencies.multi-party-eddsa]
-# git = "https://github.com/KZen-networks/multi-party-eddsa"
-# tag = "v0.2.3"
-
-# [dependencies.multi-party-schnorr]
-# git = "https://github.com/KZen-networks/multi-party-schnorr"
-# tag = "v0.4.5"
-
-# [patch.crates-io]
-# rust-gmp = { version = "0.5.1", features = ["serde_support"], git = "https://github.com/KZen-networks/rust-gmp" }
-
-# [build-dependencies.cc]
-# version = "=1.0.61"
-# features = ["parallel"]
-
-# [patch.crates-io]
-# librocksdb-sys = { version = "0.7.0", git = "https://github.com/rust-rocksdb/rust-rocksdb" }

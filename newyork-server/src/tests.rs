@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod test_suites {
 
-    use crate::utils::settings::get_test_env;
+    use crate::utils::settings::get_app_env;
+    use crate::utils::settings::TestEnv;
 
     use super::super::routes::ecdsa;
     use super::super::server;
@@ -294,7 +295,7 @@ mod test_suites {
 
     #[test]
     fn key_gen_and_sign() {
-        let env_configs = get_test_env(".env.test");
+        let env_configs = get_app_env::<TestEnv>(".env.test");
         let signin_url = env_configs.test_signin_url;
         let test_email = env_configs.test_email;
         let test_pass = env_configs.test_pass;
