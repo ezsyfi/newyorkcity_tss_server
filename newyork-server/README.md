@@ -9,15 +9,13 @@ Newyork server is a RESTful web service exposing APIs for two party ECDSA key ge
 ```bash
 git clone https://github.com/KZen-networks/newyork-city.git
 cd newyork-city/newyork-server
-cargo run --release
+make run
 ```
 
 * By default, the server will use a local [RocksDB](https://rocksdb.org/).<br> 
-Optionally, it can use a remote [AWS DynamoDB](https://aws.amazon.com/dynamodb/), 
-by setting the environment variable `DB` to the value `AWS`, and the AWS credentials `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. 
 
-* By default, the server will use no authentication (PASSTHROUGH).<br> 
-Optionally, it can use JWT with AWS Cognito as a service provider by setting proper environment variable (audience, region, pool_id, issuer).
+### RocksDB Debugging Tool
+https://github.com/facebook/rocksdb/wiki/Administration-and-Data-Access-Tool#ldb-tool
 
 ### Running tests
 #### Without timing output
