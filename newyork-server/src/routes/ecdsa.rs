@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use crate::utils::requests::{post, validate_auth_token, HttpClient};
+use crate::utils::requests::{get, post, validate_auth_token, HttpClient};
 use crate::AnyhowError;
 
 use anyhow::{anyhow, Result};
@@ -244,7 +244,7 @@ pub async fn chain_code_second_message(
     let master_key = chain_code_compute_message(state, &auth_payload, id, party2_pub)?;
 
     // Send mk#2 to HCMC
-    send_store_mk_req(state, &auth_payload, &master_key).await?;
+    send_mk_to_vault(state, &auth_payload, &master_key).await?;
 
     Ok(Json(party1_cc))
 }
@@ -269,7 +269,7 @@ pub fn chain_code_compute_message(
     master_key(state, auth_payload, id)
 }
 
-pub fn master_key(
+fn master_key(
     state: &State<AppConfig>,
     auth_payload: &AuthPayload,
     id: String,
@@ -356,16 +356,27 @@ pub struct SignSecondMsgRequest {
     pub y_pos_child_key: BigInt,
 }
 #[post("/ecdsa/sign/<id>/second", format = "json", data = "<request>")]
-pub fn sign_second(
+pub async fn sign_second(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
     request: Json<SignSecondMsgRequest>,
 ) -> Result<Json<party_one::SignatureRecid>, AnyhowError> {
     let user_id = &auth_payload.user_id;
-    let master_key: MasterKey1 =
-        db::get(&state.db, user_id, &id, &EcdsaStruct::Party1MasterKey)?
-            .ok_or_else(|| anyhow!("No Party1MasterKey for such userId {} - id {}", user_id, id))?;
+    let master_key: MasterKey1 = match get_mk(state, auth_payload.clone(), &id) {
+        Ok(mk) => mk,
+        Err(_) => {
+            info!("MasterKey1 not found in memory, trying to get from vault");
+            let mk = match get_mk_from_vault(state, &auth_payload).await {
+                Ok(mk) => {
+                    db::insert(&state.db, user_id, &id, &EcdsaStruct::Party1MasterKey, &mk)?;
+                    mk
+                }
+                Err(e) => return Err(AnyhowError::from(anyhow!("{:#?}", e))),
+            };
+            mk
+        }
+    };
 
     let x: BigInt = request.x_pos_child_key.clone();
     let y: BigInt = request.y_pos_child_key.clone();
@@ -512,7 +523,7 @@ pub fn recover(
     Ok(Json(pos_old))
 }
 
-async fn send_store_mk_req(
+async fn send_mk_to_vault(
     state: &State<AppConfig>,
     auth_payload: &AuthPayload,
     master_key: &MasterKey1,
@@ -534,4 +545,23 @@ async fn send_store_mk_req(
     }
 
     Ok(())
+}
+
+async fn get_mk_from_vault(
+    state: &State<AppConfig>,
+    auth_payload: &AuthPayload,
+) -> Result<MasterKey1> {
+    let http_client = HttpClient::new(state.hcmc_api.clone());
+    let mk_resp = get(&http_client, "/api/v1/storage/secret")
+        .await
+        .bearer_auth(&auth_payload.token)
+        .send()
+        .await?;
+
+    let mk_str = mk_resp.text().await?;
+    if mk_str.is_empty() {
+        return Err(anyhow!("Get master key from vault failed!"));
+    }
+    let mk = serde_json::from_str::<MasterKey1>(&mk_str)?;
+    Ok(mk)
 }
