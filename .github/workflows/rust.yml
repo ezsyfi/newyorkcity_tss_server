@@ -108,4 +108,4 @@ jobs:
             cd $HOME && \
             docker network create --driver bridge tss_new || true && \
             docker stop nyc || true && docker rm nyc || true && \
-            docker run --restart unless-stopped -d --rm --name nyc --ip ${{secrets.NYC_CONTAINER_IP}} -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{ steps.meta.outputs.tags }}
+            docker run --restart unless-stopped -d --name nyc --ip ${{secrets.NYC_CONTAINER_IP}} -p ${{secrets.NYC_PORT}}:${{secrets.NYC_PORT}} --network=tss_new ${{ steps.meta.outputs.tags }}
