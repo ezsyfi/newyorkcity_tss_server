@@ -404,7 +404,8 @@ pub async fn sign_second(
     );
 
     if signature_with_recid.is_err() {
-        error!("Signature validation failed")
+        error!("Signature validation failed");
+        return Err(AnyhowError::from(anyhow!("Signature validation failed")));
     };
 
     Ok(Json(signature_with_recid.unwrap()))
