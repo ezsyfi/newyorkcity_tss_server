@@ -462,7 +462,20 @@ pub async fn rotate_second(
     )>,
     AnyhowError,
 > {
-    let party_one_master_key = get_mk(state, auth_payload.clone(), &id)?;
+    let party_one_master_key: MasterKey1 = match get_mk(state, auth_payload.clone(), &id) {
+        Ok(mk) => mk,
+        Err(_) => {
+            info!("MasterKey1 not found in memory, trying to get from vault");
+            let mk = match get_mk_from_vault(state, &auth_payload).await {
+                Ok(mk) => {
+                    db::insert(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::Party1MasterKey, &mk)?;
+                    mk
+                }
+                Err(e) => return Err(AnyhowError::from(anyhow!("{:#?}", e))),
+            };
+            mk
+        }
+    };
     let user_id = &auth_payload.user_id;
 
     let m1: Secp256k1Scalar =
