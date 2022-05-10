@@ -418,11 +418,12 @@ pub fn get_mk(state: &State<AppConfig>, auth_payload: AuthPayload, id: &str) -> 
 }
 
 #[post("/ecdsa/rotate/<id>/first", format = "json")]
-pub fn rotate_first(
+pub async fn rotate_first(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
 ) -> Result<Json<coin_flip_optimal_rounds::Party1FirstMessage<GE>>, AnyhowError> {
+    validate_auth_token(state, &auth_payload).await?;
     let (party1_coin_flip_first_message, m1, r1) = Rotation1::key_rotate_first_message();
     let user_id = &auth_payload.user_id;
     db::insert(
@@ -449,7 +450,7 @@ pub fn rotate_first(
     format = "json",
     data = "<party2_first_message>"
 )]
-pub fn rotate_second(
+pub async fn rotate_second(
     state: &State<AppConfig>,
     id: String,
     auth_payload: AuthPayload,
@@ -507,6 +508,9 @@ pub fn rotate_second(
         &party_one_master_key_rotated,
     )?;
 
+    // Send mk#2 to HCMC
+    send_mk_to_vault(state, &auth_payload, &party_one_master_key_rotated).await?;
+
     Ok(Json((
         party1_second_message,
         rotation_party_one_first_message,
@@ -514,11 +518,12 @@ pub fn rotate_second(
 }
 
 #[post("/ecdsa/<id>/recover", format = "json")]
-pub fn recover(
+pub async fn recover(
     state: &State<AppConfig>,
     auth_payload: AuthPayload,
     id: String,
 ) -> Result<Json<u32>, AnyhowError> {
+    validate_auth_token(state, &auth_payload).await?;
     let pos_old: u32 = db::get(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::POS)?
         .ok_or_else(|| anyhow!("No POS for such identifier {}", id))?;
     Ok(Json(pos_old))
