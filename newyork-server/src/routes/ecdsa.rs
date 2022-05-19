@@ -468,7 +468,13 @@ pub async fn rotate_second(
             info!("MasterKey1 not found in memory, trying to get from vault");
             let mk = match get_mk_from_vault(state, &auth_payload).await {
                 Ok(mk) => {
-                    db::insert(&state.db, &auth_payload.user_id, &id, &EcdsaStruct::Party1MasterKey, &mk)?;
+                    db::insert(
+                        &state.db,
+                        &auth_payload.user_id,
+                        &id,
+                        &EcdsaStruct::Party1MasterKey,
+                        &mk,
+                    )?;
                     mk
                 }
                 Err(e) => return Err(AnyhowError::from(anyhow!("{:#?}", e))),

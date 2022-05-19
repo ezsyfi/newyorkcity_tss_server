@@ -153,7 +153,7 @@ pub async fn contract_data(
         }
     };
 
-    Ok(Json(Erc20Resp{
+    Ok(Json(Erc20Resp {
         contract: contract.abi().clone(),
     }))
 }
