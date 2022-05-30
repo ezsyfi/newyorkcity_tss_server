@@ -1,19 +1,15 @@
-use std::collections::HashMap;
-use std::str::FromStr;
-
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use rocket::serde::json::Json;
 use rocket::State;
-use web3::contract::Contract;
 use web3::types::{Address, Bytes, TransactionParameters, H256, U256, U64};
 use web3::{transports, Web3};
 
+use crate::utils::erc20::get_contract_abi;
 use crate::utils::requests::validate_auth_token;
 use crate::AnyhowError;
 
 use super::super::auth::guards::AuthPayload;
 use super::super::AppConfig;
-use super::ERC20_ADDRESSES_JSON;
 
 #[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct EthTxParamsResp {
@@ -103,58 +99,10 @@ pub async fn contract_data(
 ) -> Result<Json<Erc20Resp>, AnyhowError> {
     validate_auth_token(state, &auth_payload).await?;
     let web3 = establish_web3_connection(&state.alchemy_api).await?;
-
-    let network_token_map: HashMap<String, HashMap<String, Erc20>> =
-        match serde_json::from_str(ERC20_ADDRESSES_JSON) {
-            Ok(map) => map,
-            Err(err) => {
-                return Err(AnyhowError::from(anyhow!(
-                    "Failed to parse ERC20 network map: {}",
-                    err
-                )));
-            }
-        };
-
-    let name_token_map = match network_token_map.get(&token_info.network) {
-        Some(map) => map,
-        None => {
-            return Err(AnyhowError::from(anyhow!(
-                "Can't find token collection of provided network"
-            )));
-        }
-    };
-
-    let token_obj = match name_token_map.get(&token_info.name) {
-        Some(map) => map,
-        None => {
-            return Err(AnyhowError::from(anyhow!(
-                "Can't find token that matches provided name"
-            )));
-        }
-    };
-    let contract_address = match Address::from_str(&token_obj.address) {
-        Ok(s) => s,
-        Err(err) => {
-            return Err(AnyhowError::from(anyhow!(
-                "Failed to parse ERC20 address: {}",
-                err
-            )));
-        }
-    };
-
-    let contract = match Contract::from_json(web3.eth(), contract_address, token_obj.abi.as_bytes())
-    {
-        Ok(c) => c,
-        Err(err) => {
-            return Err(AnyhowError::from(anyhow!(
-                "Failed to parse ERC20 contract: {}",
-                err
-            )));
-        }
-    };
+    let contract = get_contract_abi(&token_info.network, &token_info.name, web3)?;
 
     Ok(Json(Erc20Resp {
-        contract: contract.abi().clone(),
+        contract,
     }))
 }
 

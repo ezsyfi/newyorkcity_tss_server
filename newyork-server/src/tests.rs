@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod test_suites {
+mod integration_test_suites {
 
     use crate::utils::settings::get_app_env;
     use crate::utils::settings::TestEnv;
@@ -315,7 +315,6 @@ mod test_suites {
             .json::<AuthToken>()
             .unwrap();
 
-        println!("{:#?}", http_resp);
         let auth_header = Header::new("Authorization", format!("Bearer {}", http_resp.Msg));
         let user_id_header = Header::new("user_id", test_email);
 
@@ -391,5 +390,27 @@ mod test_suites {
             .dispatch();
 
         assert_eq!(401, response.status().code);
+    }
+}
+
+#[cfg(test)]
+mod unit_test_suites {
+    use anyhow::Result;
+
+    use crate::{
+        routes::eth::establish_web3_connection,
+        utils::{
+            erc20::get_contract_abi,
+            settings::{get_app_env, TestEnv},
+        },
+    };
+    #[tokio::test]
+    async fn test_get_contract_abi() -> Result<()> {
+        let env_configs = get_app_env::<TestEnv>(".env.test");
+        let alchemy_api = env_configs.alchemy_api;
+        let web3 = establish_web3_connection(&alchemy_api).await?;
+        let token_abi = get_contract_abi("rinkeby", "usdt", web3);
+        println!("{:#?}", token_abi);
+        Ok(())
     }
 }
