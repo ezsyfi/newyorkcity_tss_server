@@ -101,9 +101,7 @@ pub async fn contract_data(
     let web3 = establish_web3_connection(&state.alchemy_api).await?;
     let contract = get_contract_abi(&token_info.network, &token_info.name, web3)?;
 
-    Ok(Json(Erc20Resp {
-        contract,
-    }))
+    Ok(Json(Erc20Resp { contract }))
 }
 
 #[post("/eth/tx/send", format = "json", data = "<signed>")]
