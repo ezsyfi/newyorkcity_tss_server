@@ -49,6 +49,7 @@ pub fn get_server() -> _ {
                 ecdsa::recover,
                 eth::tx_parameters,
                 eth::tx_send,
+                eth::contract_data
             ],
         )
         .manage(app_config)

@@ -9,6 +9,7 @@ pub struct TestEnv {
     pub test_signin_url: String,
     pub test_email: String,
     pub test_pass: String,
+    pub alchemy_api: String,
 }
 
 pub fn get_app_env<T>(file_name: &str) -> T

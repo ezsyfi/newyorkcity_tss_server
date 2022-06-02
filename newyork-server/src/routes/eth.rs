@@ -1,9 +1,10 @@
 use anyhow::Result;
 use rocket::serde::json::Json;
 use rocket::State;
-use web3::types::{AccessList, Address, Bytes, TransactionParameters, H256, U256, U64};
+use web3::types::{Address, Bytes, TransactionParameters, H256, U256, U64};
 use web3::{transports, Web3};
 
+use crate::utils::erc20::get_contract_abi;
 use crate::utils::requests::validate_auth_token;
 use crate::AnyhowError;
 
@@ -12,14 +13,10 @@ use super::super::AppConfig;
 
 #[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct EthTxParamsResp {
-    pub to: Option<Address>,
     pub nonce: U256,
     pub gas: U256,
     pub gas_price: U256,
-    pub value: U256,
-    pub data: Vec<u8>,
     pub transaction_type: Option<U64>,
-    pub access_list: AccessList,
     pub max_priority_fee_per_gas: U256,
     pub chain_id: u64,
 }
@@ -41,6 +38,23 @@ pub struct EthSendTxReqBody {
     pub raw_tx: Bytes,
 }
 
+#[derive(Deserialize, Debug, PartialEq, Clone)]
+pub struct Erc20ReqBody {
+    pub name: String,
+    pub network: String,
+}
+
+#[derive(Serialize, Debug, PartialEq, Clone)]
+pub struct Erc20Resp {
+    pub contract: web3::ethabi::Contract,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+struct Erc20 {
+    pub address: String,
+    pub abi: String,
+}
+
 const EIP1559_TX_ID: u64 = 2;
 
 #[post("/eth/tx/params", format = "json", data = "<tx_info>")]
@@ -50,9 +64,11 @@ pub async fn tx_parameters(
     tx_info: Json<EthTxParamsReqBody>,
 ) -> Result<Json<EthTxParamsResp>, AnyhowError> {
     validate_auth_token(state, &auth_payload).await?;
-    let tx_params = create_eth_transaction(tx_info.to_address, tx_info.eth_value)?;
     let web3 = establish_web3_connection(&state.alchemy_api).await?;
 
+    let tx_params = TransactionParameters {
+        ..Default::default()
+    };
     let (nonce, gas_price, chain_id) =
         get_chain_required_params(tx_info.from_address, tx_params.clone(), web3).await?;
 
@@ -64,19 +80,28 @@ pub async fn tx_parameters(
     };
 
     let resp = EthTxParamsResp {
-        to: tx_params.to,
         nonce,
         gas: tx_params.gas,
         gas_price,
-        value: tx_params.value,
-        data: tx_params.data.0,
         transaction_type: tx_params.transaction_type,
-        access_list: tx_params.access_list.unwrap_or_default(),
         max_priority_fee_per_gas,
         chain_id,
     };
 
     Ok(Json(resp))
+}
+
+#[post("/eth/contract", format = "json", data = "<token_info>")]
+pub async fn contract_data(
+    state: &State<AppConfig>,
+    auth_payload: AuthPayload,
+    token_info: Json<Erc20ReqBody>,
+) -> Result<Json<Erc20Resp>, AnyhowError> {
+    validate_auth_token(state, &auth_payload).await?;
+    let web3 = establish_web3_connection(&state.alchemy_api).await?;
+    let contract = get_contract_abi(&token_info.network, &token_info.name, web3)?;
+
+    Ok(Json(Erc20Resp { contract }))
 }
 
 #[post("/eth/tx/send", format = "json", data = "<signed>")]
@@ -90,14 +115,6 @@ pub async fn tx_send(
     let tx_hash = send_tx(web3, signed.raw_tx.clone()).await?;
 
     Ok(Json(EthSendTxResp { tx_hash }))
-}
-
-fn create_eth_transaction(to: Address, eth_value: f64) -> Result<TransactionParameters> {
-    Ok(TransactionParameters {
-        to: Some(to),
-        value: eth_to_wei(eth_value),
-        ..Default::default()
-    })
 }
 
 pub async fn establish_web3_connection(url: &str) -> Result<Web3<transports::WebSocket>> {
@@ -146,11 +163,4 @@ pub async fn get_chain_required_params(
 pub async fn send_tx(web3: Web3<transports::WebSocket>, raw_tx: Bytes) -> Result<H256> {
     let tx_hash = web3.eth().send_raw_transaction(raw_tx).await?;
     Ok(tx_hash)
-}
-
-pub fn eth_to_wei(eth_value: f64) -> U256 {
-    let result = eth_value * 1_000_000_000_000_000_000.0;
-    let result = result as u128;
-
-    U256::from(result)
 }
