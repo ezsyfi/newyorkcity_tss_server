@@ -3,13 +3,6 @@ use std::{collections::HashMap, fs, str::FromStr};
 use anyhow::{anyhow, Result};
 use web3::{contract::Contract, transports::WebSocket, types::Address, Web3};
 
-pub const ERC20_ADDRESSES_JSON: &str = r#"{
-    "rinkeby": {
-      "usdt": "0x3B00Ef435fA4FcFF5C209a37d1f3dcff37c705aD"
-    }
-  }  
-  "#;
-
 pub fn get_contract_abi(
     token_network: &str,
     token_name: &str,
