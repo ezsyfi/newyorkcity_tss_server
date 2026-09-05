@@ -96,3 +96,6 @@ Newyork City is released under the terms of the GPL-3.0 license. See [LICENSE](L
 Contact
 -------
 For any questions, feel free to [email us](mailto:github@kzencorp.com) or join ZenGo X [Telegram](https://t.me/joinchat/ET1mddGXRoyCxZ-7).
+
+
+<!-- Security scan triggered at 2026-09-05 07:30:28 -->
